@@ -1,4 +1,9 @@
 {
   "name": "Langkah",
-  "displayName": "Langkah"
+  "displayName": "Langkah",
+
+  "android": {
+    "package": "com.langkah",
+    "googleMapsAPIKey": "AIzaSyCbuidvf07pnrc1nbXDrssLHNrDa9AKnK0"
+  }
 }
