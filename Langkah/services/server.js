@@ -1,28 +1,38 @@
 // server.js
 const express = require('express');
-const { Client } = require('pg');
+const cors = require('cors');
 const app = express();
 const port = 3000;
+const pool = require('./database');
 
-const client = new Client({
-    host : 'localhost',
-    user : 'postgres',
-    port : 5432,
-    password : '1234',
-    database : 'mapData'
+
+//middleware
+app.use(cors());
+app.use(express.json());
+
+
+
+//ROUTES
+
+//get all locations
+app.get('/locations', async (req, res) => {
+    try {
+        const locations = await pool.query('SELECT * FROM merged_mrt_lrt');
+        res.json(locations.rows);
+    } catch (err) {
+        console.error(err.message);
+    }
 });
 
-client.connect();
 
-app.get('/data', (req, res) => {
-    client.query('SELECT * FROM merged_mrt_lrt', (err, result) => {
-        if (!err) {
-            res.send(result.rows);
-        } else {
-            console.log(err);
-            res.send(err);
-        }
-    });
+// get a location
+app.get('/locations/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        console.log(req.params);
+    } catch (err) {
+        console.error(err.message);
+    }
 });
 
 app.listen(port, () => {
