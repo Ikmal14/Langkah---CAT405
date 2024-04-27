@@ -1,3 +1,4 @@
+from ssl import Options
 import time
 import pandas as pd
 import concurrent.futures
@@ -5,6 +6,9 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from urllib.parse import urlparse
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+
 
 # Function to scrape popular times from Google Maps URL using Selenium
 from selenium import webdriver
@@ -33,6 +37,7 @@ def connect_to_postgres():
     )
     return conn
 
+
 def scrape_data(data_tuple):
     """
     Scrapes the popular times status and station name from a given URL using Selenium.
@@ -54,7 +59,7 @@ def scrape_data(data_tuple):
     station_id, url = data_tuple  # Unpack the tuple into station_id and url
 
     driver.get(url)
-    # time.sleep(5)  # Wait for page to load (adjust as needed)
+    time.sleep(5)  # Wait for page to load (adjust as needed)
 
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     # Find the element containing the current status
