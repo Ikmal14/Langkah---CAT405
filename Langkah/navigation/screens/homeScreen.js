@@ -1,53 +1,54 @@
 import React, { useState } from "react";
-import { View, Text, Button, TextInput, StyleSheet, TouchableOpacity } from "react-native";
-
+import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
 
 const HomeScreen = ({ navigation }) => {
-    // State variables for origin and destination
     const [origin, setOrigin] = useState("");
     const [destination, setDestination] = useState("");
-
-    // Function to switch the values of origin and destination
-    const switchLocations = () => {
-        const temp = origin;
-        setOrigin(destination);
-        setDestination(temp);
-    };
-
-    // State variables for language and checkbox
-    const [language, setLanguage] = useState("en");
     const [isChecked, setIsChecked] = useState(false);
 
-    // Function to handle checkbox click
+    const handleSearch = () => {
+        // Navigate to ResultScreen
+        navigation.navigate("Result", { origin, destination });
+
+        // For now, just for display purposes, navigate to the History screen
+        navigation.navigate("History");
+    };
+
     const handleCheckboxClick = () => {
         setIsChecked(!isChecked);
     };
 
     return (
         <View style={styles.container}>
-            {/* Input container */}
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Origin"
-                    value={origin}
-                    onChangeText={setOrigin}
-                />
-                <Button title="Switch" onPress={switchLocations} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Destination"
-                    value={destination}
-                    onChangeText={setDestination}
-                />
+            <View style={styles.header}>
+                <Text style={styles.city}>Penang</Text>
             </View>
 
-            {/* Less Crowded Option */}
-            <View style={styles.textOption}>
+            <View style={styles.searchContainer}>
+                <View style={styles.inputContainer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Origin"
+                        value={origin}
+                        onChangeText={setOrigin}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Destination"
+                        value={destination}
+                        onChangeText={setDestination}
+                    />
+                </View>
+                <TouchableOpacity style={styles.searchIcon} onPress={handleSearch}>
+                    <Text style={styles.searchIconText}>🔍</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.optionContainer}>
                 <TouchableOpacity style={styles.checkbox} onPress={handleCheckboxClick}>
                     {isChecked ? <Text style={styles.check}>✓</Text> : null}
                 </TouchableOpacity>
-                <Text>Less Crowded Option</Text>
+                <Text style={styles.optionText}>Less Crowded Option</Text>
             </View>
         </View>
     );
@@ -58,37 +59,67 @@ export default HomeScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: "center",
-        justifyContent: "top",
+        padding: 20,
+        backgroundColor: "#f9f9f9",
     },
-    inputContainer: {
+    header: {
+        marginBottom: 20,
+    },
+    city: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#000",
+    },
+    searchContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 10,
-        gap: 10,
-        paddingHorizontal: 10,
+        borderColor: "#ccc",
+        borderWidth: 1,
+        borderRadius: 5,
+        backgroundColor: "#fff",
+        marginBottom: 20,
+    },
+    inputContainer: {
+        flex: 1,
+        flexDirection: "row",
     },
     input: {
         flex: 1,
-        height: 40,
-        borderColor: "gray",
-        borderWidth: 1,
-        paddingHorizontal: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        fontSize: 16,
+        color: "#000",
+        borderRightWidth: 1,
+        borderColor: "#ccc",
+    },
+    searchIcon: {
+        padding: 10,
+        backgroundColor: "#007AFF",
+        borderTopRightRadius: 5,
+        borderBottomRightRadius: 5,
+    },
+    searchIconText: {
+        fontSize: 16,
+        color: "#fff",
+    },
+    optionContainer: {
+        flexDirection: "row",
+        alignItems: "center",
     },
     checkbox: {
         width: 20,
         height: 20,
         borderWidth: 1,
         borderColor: "black",
+        justifyContent: "center",
+        alignItems: "center",
     },
     check: {
         alignSelf: "center",
     },
-    textOption: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 10,
-        gap: 10,
-        paddingHorizontal: 10,
+    optionText: {
+        marginLeft: 10,
+        fontSize: 16,
+        color: "#000",
     },
 });

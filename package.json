@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "@react-navigation/native": "^6.1.17",
-    "react-native-paper": "^5.12.3"
+    "react-native-geolocation-service": "^5.3.1",
+    "react-native-paper": "^5.12.3",
+    "react-navigation": "^5.0.0"
   }
 }

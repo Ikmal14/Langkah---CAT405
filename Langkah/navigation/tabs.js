@@ -1,3 +1,4 @@
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image } from 'react-native';
 import MapScreen from './screens/mapScreen';
@@ -9,17 +10,17 @@ const Tab = createBottomTabNavigator();
 const Tabs = () => {
     return (
         <Tab.Navigator
-            tabBarOptions={{
+            screenOptions={{
                 showLabel: false,
-                style: {
+                tabBarStyle: {
                     height: 60, // Increase the height of the tab bar
                 },
-                tabStyle: {
+                tabBarItemStyle: {
                     // Customize the style of each tab
                     alignItems: 'center',
                     justifyContent: 'space-evenly',
                 },
-                iconStyle: {
+                tabBarIconStyle: {
                     marginRight: 10,
                 },
             }}
