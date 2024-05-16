@@ -1,125 +1,142 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { SafeAreaView, StyleSheet, View, Text, FlatList } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { Searchbar } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import Geolocation from 'react-native-geolocation-service';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { fetchLocations } from '../../services/locationSlice';
 
-const HomeScreen = ({ navigation }) => {
-    const [origin, setOrigin] = useState("");
-    const [destination, setDestination] = useState("");
-    const [isChecked, setIsChecked] = useState(false);
+const HomeScreen = () => {
+  const [location, setLocation] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const { stations } = useSelector((state) => state.location);
+  const bottomSheetRef = useRef(null);
 
-    const handleSearch = () => {
-        // Navigate to ResultScreen
-        navigation.navigate("Result", { origin, destination });
+  const onChangeSearch = (query) => setSearchQuery(query);
 
-        // For now, just for display purposes, navigate to the History screen
-        navigation.navigate("History");
-    };
+  const requestLocationPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        Geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setLocation({ latitude, longitude });
+          },
+          (error) => {
+            console.log(error.code, error.message);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      } else {
+        console.log('Location permission denied');
+      }
+    } catch (err) {
+      console.warn(err);
+    }
+  };
 
-    const handleCheckboxClick = () => {
-        setIsChecked(!isChecked);
-    };
+  useEffect(() => {
+    requestLocationPermission();
+    dispatch(fetchLocations());
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.city}>Penang</Text>
+    const interval = setInterval(() => {
+      dispatch(fetchLocations());
+    }, 600000); // 10 minutes in milliseconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [dispatch]);
+
+  const handleStationPress = (station) => {
+    navigation.navigate('StationScreen', { station });
+  };
+
+  const renderItem = ({ item }) => (
+    <View style={styles.stationItem} onPress={() => handleStationPress(item)}>
+      <Text style={styles.stationName}>{item.station_name}</Text>
+      <Text style={styles.stationDetails}>Line: {item.line}</Text>
+      <Text style={styles.stationDetails}>Status: {item.crowd_status}</Text>
+    </View>
+  );
+
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      <Searchbar
+        placeholder="Search"
+        onChangeText={onChangeSearch}
+        value={searchQuery}
+        onFocus={() => navigation.navigate('Search')}
+      />
+      <MapView
+        style={styles.map}
+        region={{
+          latitude: location ? location.latitude : 3.139,
+          longitude: location ? location.longitude : 101.6869,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}
+      >
+        {location && (
+          <Marker coordinate={location}>
+            <View>
+              <Text>Your Location</Text>
             </View>
-
-            <View style={styles.searchContainer}>
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Origin"
-                        value={origin}
-                        onChangeText={setOrigin}
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Destination"
-                        value={destination}
-                        onChangeText={setDestination}
-                    />
-                </View>
-                <TouchableOpacity style={styles.searchIcon} onPress={handleSearch}>
-                    <Text style={styles.searchIconText}>🔍</Text>
-                </TouchableOpacity>
+          </Marker>
+        )}
+        {stations.map((station) => (
+          <Marker
+            key={station.id}
+            coordinate={{ latitude: station.latitude, longitude: station.longitude }}
+          >
+            <View>
+              <Text>{station.station_name}</Text>
             </View>
-
-            <View style={styles.optionContainer}>
-                <TouchableOpacity style={styles.checkbox} onPress={handleCheckboxClick}>
-                    {isChecked ? <Text style={styles.check}>✓</Text> : null}
-                </TouchableOpacity>
-                <Text style={styles.optionText}>Less Crowded Option</Text>
-            </View>
-        </View>
-    );
+          </Marker>
+        ))}
+      </MapView>
+      <BottomSheet ref={bottomSheetRef} index={0} snapPoints={['25%', '50%', '100%']}>
+        <BottomSheetView style={styles.contentContainer}>
+          <FlatList
+            data={stations}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+          />
+        </BottomSheetView>
+      </BottomSheet>
+    </GestureHandlerRootView>
+  );
 };
 
-export default HomeScreen;
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: "#f9f9f9",
-    },
-    header: {
-        marginBottom: 20,
-    },
-    city: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#000",
-    },
-    searchContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        borderColor: "#ccc",
-        borderWidth: 1,
-        borderRadius: 5,
-        backgroundColor: "#fff",
-        marginBottom: 20,
-    },
-    inputContainer: {
-        flex: 1,
-        flexDirection: "row",
-    },
-    input: {
-        flex: 1,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        fontSize: 16,
-        color: "#000",
-        borderRightWidth: 1,
-        borderColor: "#ccc",
-    },
-    searchIcon: {
-        padding: 10,
-        backgroundColor: "#007AFF",
-        borderTopRightRadius: 5,
-        borderBottomRightRadius: 5,
-    },
-    searchIconText: {
-        fontSize: 16,
-        color: "#fff",
-    },
-    optionContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderWidth: 1,
-        borderColor: "black",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    check: {
-        alignSelf: "center",
-    },
-    optionText: {
-        marginLeft: 10,
-        fontSize: 16,
-        color: "#000",
-    },
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  stationItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  stationName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  stationDetails: {
+    fontSize: 14,
+  },
 });
+
+export default HomeScreen;
