@@ -1,51 +1,46 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { SafeAreaView, StyleSheet, View, Text, FlatList } from 'react-native';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Searchbar } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import Geolocation from 'react-native-geolocation-service';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import { fetchLocations } from '../../services/locationSlice';
+import { fetchLocations, fetchOutputStations } from '../../services/locationSlice';
+import SearchScreen from './searchScreen';
 
 const HomeScreen = () => {
   const [location, setLocation] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigation = useNavigation();
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [filteredStations, setFilteredStations] = useState([]);
+  const [region, setRegion] = useState(null);
   const dispatch = useDispatch();
   const { stations } = useSelector((state) => state.location);
-  const bottomSheetRef = useRef(null);
-
-  const onChangeSearch = (query) => setSearchQuery(query);
-
-  const requestLocationPermission = async () => {
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-      );
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        Geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            setLocation({ latitude, longitude });
-          },
-          (error) => {
-            console.log(error.code, error.message);
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-        );
-      } else {
-        console.log('Location permission denied');
-      }
-    } catch (err) {
-      console.warn(err);
-    }
-  };
+  const { outputStations = [] } = useSelector((state) => state.location); // Provide default value
+  const route = useRoute();
+  const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
+  const breathingAnimation = useRef(new Animated.Value(1)).current;
+  const { intervals } = route.params || {};
 
   useEffect(() => {
-    requestLocationPermission();
     dispatch(fetchLocations());
+    dispatch(fetchOutputStations());
+
+    Geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ latitude, longitude });
+        setRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+      },
+      (error) => {
+        console.error(error);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
 
     const interval = setInterval(() => {
       dispatch(fetchLocations());
@@ -54,62 +49,127 @@ const HomeScreen = () => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, [dispatch]);
 
-  const handleStationPress = (station) => {
-    navigation.navigate('StationScreen', { station });
-  };
+  const handleLineFilter = useCallback((line) => {
+    setSelectedLine((prevLine) => (prevLine === line ? null : line));
+  }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.stationItem} onPress={() => handleStationPress(item)}>
-      <Text style={styles.stationName}>{item.station_name}</Text>
-      <Text style={styles.stationDetails}>Line: {item.line}</Text>
-      <Text style={styles.stationDetails}>Status: {item.crowd_status}</Text>
-    </View>
-  );
+  const handleSearch = useCallback((selectedStations) => {
+    setFilteredStations(selectedStations);
+    setSelectedLine(null); // Clear line filter when search is applied
+
+    if (selectedStations.length === 2) {
+      const minLat = Math.min(selectedStations[0].latitude, selectedStations[1].latitude);
+      const maxLat = Math.max(selectedStations[0].latitude, selectedStations[1].latitude);
+      const minLon = Math.min(selectedStations[0].longitude, selectedStations[1].longitude);
+      const maxLon = Math.max(selectedStations[0].longitude, selectedStations[1].longitude);
+
+      setRegion({
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLon + maxLon) / 2,
+        latitudeDelta: (maxLat - minLat) * 1.5,
+        longitudeDelta: (maxLon - minLon) * 1.5,
+      });
+    }
+  }, []);
+
+  const resetInputs = useCallback(() => {
+    setFilteredStations([]);
+    setSelectedLine(null);
+  }, []);
+
+  const displayedStations = useMemo(() => {
+    if (filteredStations.length > 0) {
+      return filteredStations;
+    }
+    if (selectedLine) {
+      return stations.filter((station) => station.line === selectedLine);
+    }
+    return stations;
+  }, [stations, selectedLine, filteredStations]);
+
+  const lineColors = {
+    'Putrajaya': '#ffdc49',
+    'Kajang': '#007940',
+    'Monorail': '#78b13e',
+    'Kelana Jaya': '#db1e36',
+    'Sri Petaling ': '#7a2631',
+    'Ampang': '#e67425',
+  };
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Searchbar
-        placeholder="Search"
-        onChangeText={onChangeSearch}
-        value={searchQuery}
-        onFocus={() => navigation.navigate('Search')}
-      />
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {lines.map((line) => (
+            <TouchableOpacity
+              key={line}
+              style={[
+                styles.filterButton,
+                line === selectedLine && styles.selectedFilterButton,
+                { borderColor: '#000', borderWidth: 1 }
+              ]}
+              onPress={() => handleLineFilter(line)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: lineColors[line] },
+                  line === selectedLine && styles.selectedFilterText,
+                ]}
+              >
+                {line}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
       <MapView
         style={styles.map}
-        region={{
-          latitude: location ? location.latitude : 3.139,
-          longitude: location ? location.longitude : 101.6869,
+        region={region || {
+          latitude: 3.139,
+          longitude: 101.6869,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
       >
         {location && (
           <Marker coordinate={location}>
-            <View>
-              <Text>Your Location</Text>
-            </View>
+            <Animated.View style={[styles.liveLocationMarker, { transform: [{ scale: breathingAnimation }] }]}>
+              <View style={styles.innerCircle} />
+            </Animated.View>
           </Marker>
         )}
-        {stations.map((station) => (
+        {displayedStations.map((station) => (
           <Marker
             key={station.id}
+            tracksViewChanges={false}
             coordinate={{ latitude: station.latitude, longitude: station.longitude }}
           >
-            <View>
-              <Text>{station.station_name}</Text>
+            <View style={[styles.stationMarker, { backgroundColor: lineColors[station.line] }]}>
             </View>
           </Marker>
         ))}
+        {intervals && intervals.map((intervalId, index) => {
+          const intervalStation = stations.find(station => station.id === intervalId);
+          return intervalStation ? (
+            <Marker
+              key={`interval-${index}`}
+              tracksViewChanges={false}
+              coordinate={{
+                latitude: intervalStation.latitude,
+                longitude: intervalStation.longitude,
+              }}
+            >
+              <View style={styles.intervalMarker} />
+            </Marker>
+          ) : null;
+        })}
       </MapView>
-      <BottomSheet ref={bottomSheetRef} index={0} snapPoints={['25%', '50%', '100%']}>
-        <BottomSheetView style={styles.contentContainer}>
-          <FlatList
-            data={stations}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
-          />
-        </BottomSheetView>
-      </BottomSheet>
+      <SearchScreen 
+        onSearch={handleSearch} 
+        onReset={resetInputs} 
+        filter={{ setFilteredStations, filteredStations }} 
+      />
     </GestureHandlerRootView>
   );
 };
@@ -120,22 +180,55 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+    zIndex: -1,
   },
-  contentContainer: {
-    flex: 1,
-    padding: 16,
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#fff',
   },
-  stationItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+  filterButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    marginHorizontal: 5,
   },
-  stationName: {
-    fontSize: 18,
+  selectedFilterButton: {
+    backgroundColor: '#000',
+  },
+  filterText: {
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  stationDetails: {
-    fontSize: 14,
+  selectedFilterText: {
+    color: '#fff',
+  },
+  liveLocationMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 128, 255, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0, 128, 255, 1)',
+  },
+  stationMarker: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+  },
+  intervalMarker: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: 'grey',
   },
 });
 

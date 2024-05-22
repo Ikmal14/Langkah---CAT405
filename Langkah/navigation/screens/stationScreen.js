@@ -1,34 +1,33 @@
 import React from 'react';
-import { SafeAreaView, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 
-const StationScreen = ({ route }) => {
+const StationScreen = () => {
+  const route = useRoute();
   const { station } = route.params;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Station Details</Text>
-      <Text style={styles.detail}>Name: {station.name}</Text>
-      <Text style={styles.detail}>Line: {station.line}</Text>
-      <Text style={styles.detail}>Status: {station.status}</Text>
-      <Text style={styles.detail}>Congestion: {station.congestion}</Text>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.stationName}>{station.station_name}</Text>
+      <Text style={styles.lineName}>Line: {station.line}</Text>
+      {/* Add more details about the station as needed */}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  header: {
+  stationName: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
   },
-  detail: {
+  lineName: {
     fontSize: 18,
-    marginVertical: 5,
+    marginTop: 10,
   },
 });
 
