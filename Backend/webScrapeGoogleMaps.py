@@ -53,7 +53,10 @@ def scrape_data(data_tuple):
     """
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')  # Run in headless mode (no browser window)
-    service = Service('C:/webdrivers/chromedriver.exe')  # Specify the path to your chromedriver executable
+
+    chrome_driver_path = 'C:/webdrivers/chromedriver.exe'
+
+    service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=options)
 
     station_id, url = data_tuple  # Unpack the tuple into station_id and url

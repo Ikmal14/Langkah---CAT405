@@ -20,6 +20,10 @@ def fetch_station_coordinates(cursor):
     cursor.execute("SELECT id, latitude, longitude FROM merged_mrt_lrt;")
     return {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
 
+def fetch_crowd_status(cursor):
+    cursor.execute("SELECT id, crowd_status FROM merged_mrt_lrt;")
+    return {row[0]: row[1] for row in cursor.fetchall()}
+
 def fetch_edges(cursor):
     cursor.execute("SELECT source_station_id, destination_station_id, distance FROM edges_lrt_mrt;")
     edges = nx.Graph()  # Initialize a NetworkX graph
@@ -55,12 +59,12 @@ def a_star_algorithm(start, goal, G, coords):
     
     while open_set:
         _, current = heapq.heappop(open_set)
+        
         if current == goal:
             path = []
             while current in came_from:
                 path.append((current, g_score[current]))
                 current = came_from[current]
-            path.append((start, 0))
             path.reverse()
             return path
         
@@ -75,14 +79,40 @@ def a_star_algorithm(start, goal, G, coords):
                 
     return []
 
-def main():
+def get_penalty(crowd_status):
+    penalties = {
+        'As busy as it gets': 5,
+        'Busier than usual': 10,
+        'Not too busy': 3,
+        'A little busy': 2
+    }
+    return penalties.get(crowd_status, 0)
+
+def update_edges_with_penalty(G, crowd_status, avoid_busy):
+    if not avoid_busy:
+        return G
+    
+    updated_G = G.copy()
+    for station, status in crowd_status.items():
+        penalty = get_penalty(status)
+        if penalty > 0:
+            for neighbor in updated_G.neighbors(station):
+                updated_G[station][neighbor]['weight'] += penalty
+                updated_G[neighbor][station]['weight'] += penalty
+    return updated_G
+
+def main(avoid_busy):
     conn = psycopg2.connect(**DB_PARAMS)
     cursor = conn.cursor()
 
     try:
-        # Fetch station coordinates and edges
+        # Fetch station coordinates, edges, and crowd status
         coords = fetch_station_coordinates(cursor)
+        crowd_status = fetch_crowd_status(cursor)
         G = fetch_edges(cursor)  # Fetch graph from the database
+
+        # Update graph edges with penalty for busy stations if user wants to avoid them
+        G = update_edges_with_penalty(G, crowd_status, avoid_busy)
 
         # Fetch input station
         input_data = fetch_input_station(cursor)
@@ -122,4 +152,5 @@ def main():
         conn.close()
 
 if __name__ == "__main__":
-    main()
+    avoid_busy = True  # This should be set based on user input (e.g., checkbox)
+    main(avoid_busy)

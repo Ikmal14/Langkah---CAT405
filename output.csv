@@ -1,161 +1,161 @@
 Station ID,Station Name,Status
 135,MRT Bukit Bintang Station (KG18A),A little busy
-20,Sentul,A little busy
-21,Titiwangsa,Not too busy
-44,Bandar Puteri,Not too busy
-73,Ara Damansara,Not busy
-93,MRT Kepong Baru Station (PY10),A little busy
-101,MRT Hospital Kuala Lumpur (PY18),Not too busy
+20,Sentul,Less busy than usual
+21,Titiwangsa,Less busy than usual
+44,Bandar Puteri,Less busy than usual
+73,Ara Damansara,Less busy than usual
+93,MRT Kepong Baru Station (PY10),As busy as it gets
+101,MRT Hospital Kuala Lumpur (PY18),A little busy
 136,Tun Razak Exchange MRT Station (KG20 / PY23),As busy as it gets
-1,Sentul Timur (AG1/SP1),A little busy
-2,Sentul,A little busy
-3,Titiwangsa,Not too busy
-4,PWTC,Not too busy
+1,Sentul Timur (AG1/SP1),Less busy than usual
+2,Sentul,Less busy than usual
+3,Titiwangsa,Less busy than usual
+4,PWTC,A little busy
 5,Sultan Ismail,A little busy
-6,Bandaraya,Not busy
-8,Plaza Rakyat,Not too busy
-9,Hang Tuah,A little busy
+6,,
+8,Plaza Rakyat,A little busy
+9,Hang Tuah,Less busy than usual
 10,Pudu,A little busy
-11,Chan Sow Lin,A little busy
+11,Chan Sow Lin,Less busy than usual
 12,,
-13,Maluri,A little busy
+13,Maluri,Less busy than usual
 14,Pandan Jaya,A little busy
-15,,
-16,LRT Cempaka,A little busy
+15,Pandan Indah,A little busy
+16,LRT Cempaka,Less busy than usual
 17,,
 18,Ampang,A little busy
-19,Sentul Timur (AG1/SP1),A little busy
-22,PWTC,Not too busy
+19,Sentul Timur (AG1/SP1),Less busy than usual
+22,PWTC,A little busy
 23,Sultan Ismail,A little busy
-24,Bandaraya,Not busy
-26,Plaza Rakyat,Not too busy
-27,Hang Tuah,A little busy
+24,,
+26,Plaza Rakyat,A little busy
+27,Hang Tuah,Less busy than usual
 28,Pudu,A little busy
-29,Chan Sow Lin,A little busy
-30,LRT Cheras,Busier than usual
-31,Salak Selatan,A little busy
-32,Bandar Tun Razak,As busy as it gets
-33,Bandar Tasik Selatan,A little busy
+29,Chan Sow Lin,Less busy than usual
+30,LRT Cheras,Less busy than usual
+31,Salak Selatan,Less busy than usual
+32,Bandar Tun Razak,A little busy
+33,Bandar Tasik Selatan,As busy as it gets
 34,Sungai Besi,A little busy
-35,Bukit Jalil (SP17),A little busy
-36,Sri Petaling,Not too busy
-37,Awan Besar,Not too busy
-38,Muhibbah,As busy as it gets
+35,Bukit Jalil (SP17),Less busy than usual
+36,Sri Petaling,Less busy than usual
+37,Awan Besar,Less busy than usual
+38,Muhibbah,Less busy than usual
 39,Alam Sutera,A little busy
 40,Kinrara Bk5,Not too busy
 41,IOI Puchong Jaya,A little busy
 42,,
-43,Taman Perindustrian Puchong,Less busy than usual
+43,,
 45,Puchong Perdana,A little busy
-46,Puchong Prima,Busier than usual
-47,Putra Heights,Busier than usual
-48,Gombak,A little busy
+46,Puchong Prima,A little busy
+47,Putra Heights,Not too busy
+48,Gombak,Not too busy
 49,Taman Melati,A little busy
-53,Jelatek,A little busy
+53,Jelatek,Not too busy
 54,KL2311 LRT Dato' Keramat,A little busy
 55,,
-56,Ampang Park,Not too busy
-57,KLCC LRT Station,Not busy
-58,Kampung Baru,A little busy
-59,Dang Wangi,Busier than usual
-61,Pasar Seni,Not too busy
-63,Bangsar,A little busy
-64,Abdullah Hukum,A little busy
-65,Kerinchi (KJ18),Not busy
-66,LRT Universiti Station (KJ19),Not too busy
-51,LRT Sri Rampai Station,Busier than usual
-50,LRT Wangsa Maju (KJ3),Less busy than usual
-52,Setiawangsa LRT station,Not too busy
+56,Ampang Park,Less busy than usual
+57,KLCC LRT Station,Not too busy
+58,Kampung Baru,Less busy than usual
+59,Dang Wangi,Less busy than usual
+61,Pasar Seni,Less busy than usual
+63,Bangsar,Less busy than usual
+64,Abdullah Hukum,Less busy than usual
+65,Kerinchi (KJ18),Less busy than usual
+66,LRT Universiti Station (KJ19),Less busy than usual
+51,LRT Sri Rampai Station,Less busy than usual
+50,,
+52,Setiawangsa LRT station,Busier than usual
 62,KL Sentral,A little busy
-67,Taman Jaya,Not too busy
-68,Asia Jaya,Not too busy
-69,Taman Paramount,Not too busy
-70,Taman Bahagia,Busier than usual
-71,Kelana Jaya (KJ24),Not too busy
-72,Lembah Subang,A little busy
+67,Taman Jaya,Less busy than usual
+68,Asia Jaya,Less busy than usual
+69,Taman Paramount,Less busy than usual
+70,Taman Bahagia,Less busy than usual
+71,Kelana Jaya (KJ24),Less busy than usual
+72,Lembah Subang,Less busy than usual
 74,CGC–Glenmarie (KJ27),Not too busy
-75,Subang Jaya,Not too busy
-76,SS 15,Not too busy
+75,Subang Jaya,Less busy than usual
+76,SS 15,A little busy
 77,SS18,A little busy
-78,USJ7,A little busy
+78,USJ7,Less busy than usual
 79,,
-80,Wawasan,A little busy
-81,USJ21,Not too busy
-82,Alam Megah,A little busy
+80,Wawasan,Less busy than usual
+81,,
+82,Alam Megah,Less busy than usual
 83,,
-84,Putra Heights,Busier than usual
-85,Kwasa Damansara MRT Station (KG04 / PY01),A little busy
+84,Putra Heights,Not too busy
+85,Kwasa Damansara MRT Station (KG04 / PY01),Less busy than usual
 87,Sungai Buloh,A little busy
-90,Sri Damansara Sentral,Busier than usual
+90,Sri Damansara Sentral,Less busy than usual
 91,Sri Damansara Timur,A little busy
 86,MRT Kampung Selamat (PY03),A little busy
-89,MRT Sri Damansara Barat Station (PY06),Less busy than usual
+89,MRT Sri Damansara Barat Station (PY06),A little busy
 88,Damansara Damai MRT Station (PY05),A little busy
-92,Metro Prima,Busier than usual
-94,Jinjang,Not too busy
-95,Sri Delima,Not too busy
-97,Kentomen,A little busy
-98,Jalan Ipoh,Not busy
+92,Metro Prima,Less busy than usual
+94,Jinjang,A little busy
+95,Sri Delima,Less busy than usual
+97,,
+98,Jalan Ipoh,Busier than usual
 99,Sentul Barat,A little busy
 100,MRT Titiwangsa Station,Less busy than usual
-102,Raja Uda,Not too busy
-104,Persiaran KLCC,Not too busy
-105,Conlay,Not busy
-106,Tun Razak Exchange,A little busy
-110,Kuchai,Not too busy
-111,Taman Naga Emas,A little busy
-113,Serdang Raya Utara,A little busy
-114,Serdang Raya Selatan,A little busy
-115,Serdang Jaya,Not too busy
+102,Raja Uda,Less busy than usual
+104,Persiaran KLCC,Less busy than usual
+105,Conlay,Less busy than usual
+106,Tun Razak Exchange,Less busy than usual
+110,Kuchai,Less busy than usual
+111,Taman Naga Emas,Less busy than usual
+113,Serdang Raya Utara,Not too busy
+114,,
+115,Serdang Jaya,Less busy than usual
 116,UPM,A little busy
-96,MRT Kampung Batu Station (PY13),A little busy
-103,Ampang Park MRT Station (PY20),Not too busy
-107,Chan Sow Lin MRT Station (PY24),Busier than usual
-112,MRT Sungai Besi Station (PY29),Not too busy
+96,MRT Kampung Batu Station (PY13),Less busy than usual
+103,Ampang Park MRT Station (PY20),Less busy than usual
+107,Chan Sow Lin MRT Station (PY24),Less busy than usual
+112,MRT Sungai Besi Station (PY29),Less busy than usual
 117,MRT Taman Equine Station (PY36),A little busy
 118,,
-120,Cyberjaya Utara,Not too busy
+120,Cyberjaya Utara,Less busy than usual
 123,Kwasa Sentral,Not too busy
-124,Kota Damansara MRT Station (KG06),Not too busy
-126,Mutiara Damansara,Busier than usual
-127,Bandar Utama,A little busy
-128,Taman Tun Dr Ismail,Not too busy
-130,Pusat Bandar Damansara,Not busy
-131,MRT Semantan,Not too busy
-133,Pasar Seni,Not too busy
-134,Merdeka,Not too busy
-137,Cochrane,A little busy
-139,Taman Pertama,Not too busy
-119,MRT 16 Sierra (PY38),Not too busy
-121,MRT Cyberjaya City Centre (PY40),Not too busy
+124,Kota Damansara MRT Station (KG06),Less busy than usual
+126,Mutiara Damansara,Less busy than usual
+127,Bandar Utama,Not too busy
+128,Taman Tun Dr Ismail,Less busy than usual
+130,Pusat Bandar Damansara,Less busy than usual
+131,MRT Semantan,Less busy than usual
+133,Pasar Seni,Less busy than usual
+134,Merdeka,Less busy than usual
+137,Cochrane,As busy as it gets
+139,Taman Pertama,Less busy than usual
+119,MRT 16 Sierra (PY38),A little busy
+121,MRT Cyberjaya City Centre (PY40),Less busy than usual
 122,Putrajaya Sentral,A little busy
-125,Surian MRT Station (KG07),Busier than usual
-129,Phileo Damansara (KG12),A little busy
-132,Muzium Negara MRT Station (KG15),Not too busy
-138,Maluri MRT Station (KG22),A little busy
-140,MRT Taman Midah (SBK24),A little busy
-142,Taman Connaught,Less busy than usual
+125,Surian MRT Station (KG07),Less busy than usual
+129,Phileo Damansara (KG12),Less busy than usual
+132,Muzium Negara MRT Station (KG15),Less busy than usual
+138,Maluri MRT Station (KG22),Not too busy
+140,MRT Taman Midah (SBK24),Less busy than usual
+142,,
 143,Taman Suntex,A little busy
-144,Sri Raya,A little busy
+144,Sri Raya,Less busy than usual
 145,,
-146,Batu 11 Cheras,Not too busy
+146,Batu 11 Cheras,Less busy than usual
 148,,
-149,Stadium Kajang,Not too busy
-150,Kajang,A little busy
-151,Kwasa Damansara MRT Station (KG04 / PY01),A little busy
-152,KL Sentral,A little busy
-153,Tun Sambanthan,A little busy
-154,Maharajalela,A little busy
-155,Hang Tuah,A little busy
+149,Stadium Kajang,A little busy
+150,Kajang,Not too busy
+151,Kwasa Damansara MRT Station (KG04 / PY01),Less busy than usual
+152,KL Sentral,As busy as it gets
+153,Tun Sambanthan,Less busy than usual
+154,Maharajalela,Less busy than usual
+155,Hang Tuah,Not too busy
 156,Imbi,A little busy
 158,Raja Chulan,A little busy
-159,Bukit Nanas,A little busy
-161,Chow Kit,Less busy than usual
-7,Masjid Jamek,Not too busy
-25,Masjid Jamek,Not too busy
-60,Masjid Jamek,Not too busy
-141,MRT Taman Mutiara - SBK 25,Busier than usual
-160,Stesen Monorel Medan Tuanku,Not too busy
-147,MRT Bukit Dukung (KG31),A little busy
+159,Bukit Nanas,Not too busy
+161,Chow Kit,A little busy
+7,Masjid Jamek,A little busy
+25,Masjid Jamek,A little busy
+60,Masjid Jamek,A little busy
+141,MRT Taman Mutiara - SBK 25,A little busy
+160,Stesen Monorel Medan Tuanku,Less busy than usual
+147,MRT Bukit Dukung (KG31),Less busy than usual
 157,Bukit Bintang,A little busy
-162,Titiwangsa,Not too busy
+162,,

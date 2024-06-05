@@ -1,3 +1,4 @@
+// HomeScreen.js
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -19,7 +20,7 @@ const HomeScreen = () => {
   const route = useRoute();
   const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
   const breathingAnimation = useRef(new Animated.Value(1)).current;
-  const { intervals } = route.params || {};
+  const [intervals, setIntervalsData] = useState([]);
 
   useEffect(() => {
     dispatch(fetchLocations());
@@ -49,6 +50,12 @@ const HomeScreen = () => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, [dispatch]);
 
+  useEffect(() => {
+    if (route.params?.intervals) {
+      setIntervalsData(route.params.intervals);
+    }
+  }, [route.params]);
+
   const handleLineFilter = useCallback((line) => {
     setSelectedLine((prevLine) => (prevLine === line ? null : line));
   }, []);
@@ -75,6 +82,7 @@ const HomeScreen = () => {
   const resetInputs = useCallback(() => {
     setFilteredStations([]);
     setSelectedLine(null);
+    setIntervalsData([]); // clear intervals
   }, []);
 
   const displayedStations = useMemo(() => {
@@ -167,7 +175,7 @@ const HomeScreen = () => {
       </MapView>
       <SearchScreen 
         onSearch={handleSearch} 
-        onReset={resetInputs} 
+        onReset={resetInputs} // Ensure onReset is passed correctly
         filter={{ setFilteredStations, filteredStations }} 
       />
     </GestureHandlerRootView>

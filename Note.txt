@@ -1,3 +1,182 @@
-Things to take note
-1. Sri Petaling doesnt show up
-2. Tak tunjuk map according to input
+What's left
+1. avoid busy station functionality
+2. tap the station and show info
+4. notification
+5. by default avoid busy station
+6. make it more user friendly
+7. search filter for easy search
+
+
+import psycopg2
+import heapq
+import json
+import sys
+import networkx as nx
+
+# Database connection parameters
+DB_PARAMS = {
+    'dbname': 'mapData',
+    'user': 'postgres',
+    'password': '1234',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+def manhattan_distance(node1, node2):
+    x1, y1 = node1
+    x2, y2 = node2
+    return abs(x1 - x2) + abs(y1 - y2)
+
+def fetch_station_coordinates(cursor):
+    cursor.execute("SELECT id, latitude, longitude FROM merged_mrt_lrt;")
+    return {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+
+def fetch_edges(cursor):
+    cursor.execute("SELECT source_station_id, destination_station_id, distance FROM edges_lrt_mrt;")
+    edges = nx.Graph()
+    for row in cursor.fetchall():
+        edges.add_edge(row[0], row[1], weight=row[2])
+    return edges
+
+def fetch_crowded_stations(cursor):
+    cursor.execute("SELECT id FROM merged_mrt_lrt WHERE crowd_status IN ('Busier than usual', 'A little busy');")
+    return {row[0] for row in cursor.fetchall()}
+
+def fetch_crowd_status(cursor):
+    cursor.execute("SELECT id, crowd_status FROM merged_mrt_lrt;")
+    return {row[0]: row[1] for row in cursor.fetchall()}
+
+def store_output_path(cursor, input_id, path, crowd_status_map):
+    for step_order, (station_id, distance) in enumerate(path):
+        cursor.execute(
+            """
+            INSERT INTO output_stations (input_id, station_id, distance, step_order, crowd_status)
+            VALUES (%s, %s, %s, %s, %s);
+            """,
+            (input_id, station_id, distance, step_order, crowd_status_map.get(station_id, 'Unknown'))
+        )
+
+def a_star_algorithm(start, goal, G, coords, avoid_busy, crowded_stations):
+    open_set = []
+    heapq.heappush(open_set, (0, start))
+    came_from = {}
+    g_score = {start: 0}
+    f_score = {start: manhattan_distance(coords[start], coords[goal])}
+    
+    while open_set:
+        _, current = heapq.heappop(open_set)
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append((current, g_score[current]))
+                current = came_from[current]
+            path.append((start, 0))
+            path.reverse()
+            return path
+        
+        for neighbor in G.neighbors(current):
+            if avoid_busy and neighbor in crowded_stations:
+                continue
+            distance = G[current][neighbor]['weight']
+            tentative_g_score = g_score[current] + distance
+            if tentative_g_score < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                f_score[neighbor] = tentative_g_score + manhattan_distance(coords[neighbor], coords[goal])
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                
+    return []
+
+def find_alternate_path(start, goal, G, coords, crowded_stations):
+    open_set = []
+    heapq.heappush(open_set, (0, start))
+    came_from = {}
+    g_score = {start: 0}
+    f_score = {start: manhattan_distance(coords[start], coords[goal])}
+    
+    while open_set:
+        _, current = heapq.heappop(open_set)
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append((current, g_score[current]))
+                current = came_from[current]
+            path.append((start, 0))
+            path.reverse()
+            return path
+        
+        for neighbor in G.neighbors(current):
+            if neighbor in crowded_stations and neighbor != goal:
+                continue
+            distance = G[current][neighbor]['weight']
+            tentative_g_score = g_score[current] + distance
+            if tentative_g_score < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                f_score[neighbor] = tentative_g_score + manhattan_distance(coords[neighbor], coords[goal])
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                
+    return []
+
+def main():
+    if len(sys.argv) != 5:
+        print(json.dumps({"error": "Invalid arguments"}))
+        return
+
+    input_id = int(sys.argv[1])
+    origin_station_id = int(sys.argv[2])
+    destination_station_id = int(sys.argv[3])
+    avoid_busy = sys.argv[4].lower() == 'true'
+
+    conn = psycopg2.connect(**DB_PARAMS)
+    cursor = conn.cursor()
+
+    try:
+        coords = fetch_station_coordinates(cursor)
+        G = fetch_edges(cursor)
+        crowded_stations = fetch_crowded_stations(cursor)
+        crowd_status_map = fetch_crowd_status(cursor)
+
+        # First, try to find the shortest path without considering busy stations
+        path = a_star_algorithm(origin_station_id, destination_station_id, G, coords, False, crowded_stations)
+        
+        if avoid_busy:
+            # Try to find an alternate path avoiding busy stations
+            alternate_path = find_alternate_path(origin_station_id, destination_station_id, G, coords, crowded_stations)
+            
+            if alternate_path:
+                path = alternate_path
+
+        if path:
+            store_output_path(cursor, input_id, path, crowd_status_map)
+            cursor.execute(
+                "UPDATE input_stations SET status = 'success' WHERE input_id = %s;",
+                (input_id,)
+            )
+            path_ids = [station_id for station_id, _ in path]
+            print(json.dumps({"path": path_ids}))
+        else:
+            cursor.execute(
+                "UPDATE input_stations SET status = 'error' WHERE input_id = %s;",
+                (input_id,)
+            )
+            print(json.dumps({"error": "No path found from origin to destination."}))
+        
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        print(json.dumps({"error": f"An error occurred: {e}"}))
+    
+    finally:
+        cursor.close()
+        conn.close()
+
+if __name__ == "__main__":
+    main()
+
+
+with this code:
+1. divide code into 3, heuristic, edges penalty for busy station (increase weigth by 10), and A-star algo 
+2. change the heuristic from manhattan to euclidean formula
+3. in the edges penalty function, it fetch data from merged_mrt_lrt table, then it 

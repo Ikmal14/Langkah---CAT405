@@ -11,6 +11,8 @@ const pool = new Pool({
     connectionTimeoutMillis: 2000, // Time to wait for a new connection before throwing an error
 });
 
+
+
 // Error handling
 pool.on('error', (err, client) => {
     console.error('Unexpected error on idle client', err);

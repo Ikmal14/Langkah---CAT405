@@ -69,42 +69,43 @@ app.get('/output-stations', async (req, res) => {
 
 // Calculate path
 app.post('/calculate-path', async (req, res) => {
-    const { origin, destination } = req.body;
+  const { origin, destination, avoidBusy } = req.body;  // Receive the checkbox state
 
-    try {
-        // Insert the new input stations
-        await pool.query('INSERT INTO input_stations (origin_station_id, destination_station_id, status) VALUES ($1, $2, $3)', [origin, destination, 'pending']);
-        
-        // Clear the output_stations table before running the path calculation
-        await pool.query('DELETE FROM output_stations');
+  try {
+    // Insert the new input stations
+    await pool.query('INSERT INTO input_stations (origin_station_id, destination_station_id, status) VALUES ($1, $2, $3)', [origin, destination, 'pending']);
+    
+    // Clear the output_stations table before running the path calculation
+    await pool.query('DELETE FROM output_stations');
 
-        // Spawn a child process to execute the Python script
-        const pythonProcess = spawn('python', ['aStar.py']);
+    // Spawn a child process to execute the Python script
+    const pythonProcess = spawn('python', ['aStar.py', origin, destination, avoidBusy]);  // Pass the parameter to the Python script
 
-        let dataStr = '';
-        
-        pythonProcess.stdout.on('data', (data) => {
-            dataStr += data.toString();
-        });
+    let dataStr = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      dataStr += data.toString();
+    });
 
-        pythonProcess.stderr.on('data', (data) => {
-            console.error(`Python script stderr: ${data}`);
-        });
+    pythonProcess.stderr.on('data', (data) => {
+      console.error(`Python script stderr: ${data}`);
+    });
 
-        pythonProcess.on('close', (code) => {
-            if (code === 0) {
-                // Parse the output path
-                const interval = JSON.parse(dataStr.trim());
-                res.status(200).json({ message: 'Path calculated successfully', interval: interval });
-            } else {
-                res.status(500).json({ message: 'Error calculating path' });
-            }
-        });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ message: 'Server error' });
-    }
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        // Parse the output path
+        const interval = JSON.parse(dataStr.trim());
+        res.status(200).json({ message: 'Path calculated successfully', interval: interval });
+      } else {
+        res.status(500).json({ message: 'Error calculating path' });
+      }
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
+
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
