@@ -72,11 +72,14 @@ app.post('/calculate-path', async (req, res) => {
   const { origin, destination, avoidBusy } = req.body;  // Receive the checkbox state
 
   try {
-    // Insert the new input stations
-    await pool.query('INSERT INTO input_stations (origin_station_id, destination_station_id, status) VALUES ($1, $2, $3)', [origin, destination, 'pending']);
-    
     // Clear the output_stations table before running the path calculation
     await pool.query('DELETE FROM output_stations');
+    await pool.query('DELETE FROM input_stations');
+
+    // Insert the new input stations
+    await pool.query('INSERT INTO input_stations (origin_station_id, destination_station_id, status, avoid_busy) VALUES ($1, $2, $3, $4)', [origin, destination, 'pending', avoidBusy]);
+    
+    
 
     // Spawn a child process to execute the Python script
     const pythonProcess = spawn('python', ['aStar.py', origin, destination, avoidBusy]);  // Pass the parameter to the Python script

@@ -21,6 +21,8 @@ const HomeScreen = () => {
   const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
   const breathingAnimation = useRef(new Animated.Value(1)).current;
   const [intervals, setIntervalsData] = useState([]);
+  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+
 
   useEffect(() => {
     dispatch(fetchLocations());
@@ -95,6 +97,22 @@ const HomeScreen = () => {
     return stations;
   }, [stations, selectedLine, filteredStations]);
 
+  // const handleMarkerPress = (markerId) => {
+  //   setSelectedMarkerId(markerId);
+  //   console.log('Current marker ID:', markerId); // Log the current marker ID being pressed
+  //   console.log(true);
+
+  //   return(
+  //     <TouchableOpacity
+  //       style={styles.pressedStationMarker}
+  //       onPress={() => handleMarkerPress(null)}
+  //     >
+  //       <View style={[styles.stationMarker, { backgroundColor: lineColors[stations.line] }]} />
+  //     </TouchableOpacity>
+  //   )
+  // };
+  
+
   const lineColors = {
     'Putrajaya': '#ffdc49',
     'Kajang': '#007940',
@@ -103,6 +121,7 @@ const HomeScreen = () => {
     'Sri Petaling ': '#7a2631',
     'Ampang': '#e67425',
   };
+  
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -148,15 +167,19 @@ const HomeScreen = () => {
           </Marker>
         )}
         {displayedStations.map((station) => (
-          <Marker
-            key={station.id}
-            tracksViewChanges={false}
-            coordinate={{ latitude: station.latitude, longitude: station.longitude }}
-          >
-            <View style={[styles.stationMarker, { backgroundColor: lineColors[station.line] }]}>
-            </View>
-          </Marker>
-        ))}
+  <Marker
+    key={station.id}
+    tracksViewChanges={false}
+    coordinate={{ latitude: station.latitude, longitude: station.longitude }}
+    // onPress={() => handleMarkerPress(station.id)}
+  >
+    <View style={[
+      styles.stationMarker,
+      { backgroundColor: lineColors[station.line] }
+    ]}>
+    </View>
+  </Marker>
+))}
         {intervals && intervals.map((intervalId, index) => {
           const intervalStation = stations.find(station => station.id === intervalId);
           return intervalStation ? (
@@ -230,7 +253,12 @@ const styles = StyleSheet.create({
   stationMarker: {
     width: 15,
     height: 15,
-    borderRadius: 7.5,
+    borderRadius: 9,
+  },
+  pressedStationMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   intervalMarker: {
     width: 15,

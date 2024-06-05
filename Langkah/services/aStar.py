@@ -40,6 +40,19 @@ def fetch_input_station(cursor):
     cursor.execute("SELECT input_id, origin_station_id, destination_station_id FROM input_stations WHERE status = 'pending';")
     return cursor.fetchone()
 
+def fetch_avoid_busy(cursor):
+    cursor.execute("SELECT avoid_busy FROM input_stations;")
+    result = cursor.fetchone()
+    
+    if result is not None:
+        avoid_busy = result[0]  # Assuming 'avoid_busy' is the first column in the result
+        if isinstance(avoid_busy, bool):
+            return avoid_busy
+        else:
+            raise ValueError("The retrieved data is not of type bool")
+    else:
+        raise ValueError("No data found")
+
 def store_output_path(cursor, input_id, path):
     for step_order, (station_id, distance) in enumerate(path):
         cursor.execute(
@@ -101,7 +114,7 @@ def update_edges_with_penalty(G, crowd_status, avoid_busy):
                 updated_G[neighbor][station]['weight'] += penalty
     return updated_G
 
-def main(avoid_busy):
+def main():
     conn = psycopg2.connect(**DB_PARAMS)
     cursor = conn.cursor()
 
@@ -109,9 +122,8 @@ def main(avoid_busy):
         # Fetch station coordinates, edges, and crowd status
         coords = fetch_station_coordinates(cursor)
         crowd_status = fetch_crowd_status(cursor)
+        avoid_busy = fetch_avoid_busy(cursor)
         G = fetch_edges(cursor)  # Fetch graph from the database
-
-        # Update graph edges with penalty for busy stations if user wants to avoid them
         G = update_edges_with_penalty(G, crowd_status, avoid_busy)
 
         # Fetch input station
@@ -152,5 +164,4 @@ def main(avoid_busy):
         conn.close()
 
 if __name__ == "__main__":
-    avoid_busy = True  # This should be set based on user input (e.g., checkbox)
-    main(avoid_busy)
+    main()

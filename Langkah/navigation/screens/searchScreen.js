@@ -107,13 +107,13 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
           body: JSON.stringify({
             origin: originStation.id,
             destination: destinationStation.id,
-            avoidBusy: avoidBusyStations,  // Include the checkbox state here
+            avoidBusy: avoidBusyStations, // Include the checkbox state here
           }),
         });
         if (!response.ok) {
           throw new Error('Failed to calculate path');
         }
-  
+        console.log(avoidBusyStations);
         const intervalsId = await response.json();
         console.log(intervalsId.message); // Log success message
         console.log(intervalsId.interval);
