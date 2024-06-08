@@ -3,10 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'r
 import CheckBox from '@react-native-community/checkbox';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import BottomSheet, { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { fetchLocations, fetchOutputStations, fetchCrowdData } from '../../services/locationSlice';
 import { ScrollView } from 'react-native-gesture-handler';
+import _ from 'lodash';
+import Geolocation from 'react-native-geolocation-service';
 
 const SearchScreen = ({ onSearch, onReset, filter }) => {
   const [origin, setOrigin] = useState('');
@@ -72,6 +74,55 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     }
   };
 
+  const startJourney = () => {
+    if (selectedRoute && selectedRoute.intervals.length > 0) {
+      trackUserLocation();
+    }
+  };
+
+  const trackUserLocation = () => {
+    Geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        checkProximityToDestination(latitude, longitude);
+      },
+      (error) => {
+        console.error(error);
+      },
+      {
+        enableHighAccuracy: true,
+        distanceFilter: 10,
+        interval: 10000,
+      }
+    );
+  };
+
+  const checkProximityToDestination = (latitude, longitude) => {
+    const destination = selectedRoute.intervals[selectedRoute.intervals.length - 1];
+    const secondLastStation = selectedRoute.intervals[selectedRoute.intervals.length - 2];
+    const secondLastStationData = stations.find(station => station.id === secondLastStation);
+
+    // Assuming you have a function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2)
+    const distanceToSecondLastStation = getDistanceFromLatLonInKm(latitude, longitude, secondLastStationData.latitude, secondLastStationData.longitude);
+    
+    if (distanceToSecondLastStation < 0.5) {
+      showNotification();
+    }
+  };
+
+  const showNotification = () => {
+    const fireDate = ReactNativeAN.parseDate(new Date(Date.now()));
+    const alarmNotifData = {
+      title: "Langkah App",
+      message: "You are near your destination",
+      channel: "langkah-channel",
+      small_icon: "ic_launcher",
+      fire_date: fireDate,
+    };
+
+    ReactNativeAN.scheduleAlarm(alarmNotifData);
+  };
+
   const resetInputs = () => {
     setOrigin('');
     setDestination('');
@@ -120,33 +171,25 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
         
         // intervalsId.interval.shift();
         intervalsId.interval.pop();
-  
         const intervals = intervalsId.interval.map(station_id => {
           const stationName = stations.find(station => station.id === station_id)?.station_name || '';
           return stationName;
         });
-  
-        // Navigate to HomeScreen with intervals
         navigation.navigate('Langkah', { intervals: intervalsId.interval });
-  
         setIntervalsData(intervalsId.interval);
         setSelectedRoute({ origin: originStation, destination: destinationStation, intervals: intervalsId.interval });
         onSearch([originStation, destinationStation]);
-  
       } catch (error) {
         console.error('Error calculating path:', error);
       }
     }
   };
-  
 
   const swapInputs = () => {
-    const temp = origin;
     setOrigin(destination);
-    setDestination(temp);
-    const tempStation = originStation;
+    setDestination(origin);
     setOriginStation(destinationStation);
-    setDestinationStation(tempStation);
+    setDestinationStation(originStation);
   };
 
   const renderItem = ({ item }) => (
@@ -157,78 +200,66 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
   );
 
   const renderIntervals = () => {
-  if (!selectedRoute) return null;
+    if (!selectedRoute) return null;
+    const { origin, destination, intervals } = selectedRoute;
+    const intervalNames = intervals.map(interval => {
+      const station = stations.find(s => s.id === interval);
+      return station ? station.station_name : null;
+    });
 
-  const { origin, destination, intervals } = selectedRoute;
+    return (
+      <View style={styles.intervalContainer}>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[styles.boldText, { textAlign: 'center' }]}>{origin.station_name}</Text>
+          <Text style={[{ textAlign: 'center', color: lineColors[origin.line] || 'black' }]}>
+            {origin.line}
+          </Text>
+        </View>
+        {intervalNames.length > 0 && (
+          <View style={{ alignItems: 'center' }}>
+            <Icon name={origin.station_name === intervalNames[0] && origin.line !== stations.find(station => station.id === intervals[0])?.line ? "directions-walk" : "arrow-downward"} size={24} color="black" />
+          </View>
+        )}
+        {intervals.map((interval, index) => {
+          const currentStation = stations.find(station => station.id === interval);
+          const nextStation = stations.find(station => station.id === intervals[index + 1]);
+          const isTransit = currentStation.line !== nextStation?.line;
+          const lineName = currentStation?.line;
+          const backgroundColor = lineColors[lineName] || 'transparent';
 
-  // Convert interval IDs to station names
-  const intervalNames = intervals.map(interval => {
-    const station = stations.find(s => s.id === interval);
-    return station ? station.station_name : null;
-  });
+          return (
+            <React.Fragment key={index}>
+              <View style={[styles.stationContainer, { backgroundColor }]}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={styles.intervalName}>{currentStation.station_name}</Text>
+                  <Text style={styles.lineName}>{lineName}</Text>
+                </View>
+              </View>
+              {nextStation && (
+                <View style={{ alignItems: 'center' }}>
+                  <Icon name={isTransit ? "directions-walk" : "arrow-downward"} size={24} color="black" />
+                </View>
+              )}
+            </React.Fragment>
+          );
+        })}
+        {intervalNames.length > 0 && (
+          <View style={{ alignItems: 'center' }}>
+            <Icon name={destination.station_name === intervalNames[intervalNames.length - 1] && destination.line !== stations.find(station => station.id === intervals[intervals.length - 1])?.line ? "directions-walk" : "arrow-downward"} size={24} color="black" />
+          </View>
+        )}
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[styles.boldText, { textAlign: 'center' }]}>{destination.station_name}</Text>
+          <Text style={[{ textAlign: 'center', color: lineColors[destination.line] || 'black' }]}>
+            {destination.line}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   return (
-    <View style={styles.intervalContainer}>
-      <View style={{ alignItems: 'center' }}>
-        <Text style={[styles.boldText, { textAlign: 'center' }]}>{origin.station_name}</Text>
-        <Text style={[{ textAlign: 'center', color: lineColors[origin.line] || 'black' }]}>
-          {origin.line}
-        </Text>
-      </View>
-      {intervalNames.length > 0 && (
-        <View style={{ alignItems: 'center' }}>
-          <Icon name={origin.station_name === intervalNames[0] && origin.line !== stations.find(station => station.id === intervals[0])?.line ? "directions-walk" : "arrow-downward"} size={24} color="black" />
-        </View>
-      )}
-      {intervals.map((interval, index) => {
-        const currentStation = stations.find(station => station.id === interval);
-        const nextStation = stations.find(station => station.id === intervals[index + 1]);
-
-        // Determine if this is a transit based on different line names
-        const isTransit = currentStation.line !== nextStation?.line;
-
-        // Get the line name for the current station
-        const lineName = currentStation?.line;
-
-        // Set background color based on the line name
-        const backgroundColor = lineColors[lineName] || 'transparent';
-
-        return (
-          <React.Fragment key={index}>
-            <View style={[styles.stationContainer, { backgroundColor }]}>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={styles.intervalName}>{currentStation.station_name}</Text>
-                <Text style={styles.lineName}>{lineName}</Text>
-              </View>
-            </View>
-            {nextStation && (
-              <View style={{ alignItems: 'center' }}>
-                <Icon name={isTransit ? "directions-walk" : "arrow-downward"} size={24} color="black" />
-              </View>
-            )}
-          </React.Fragment>
-        );
-      })}
-      {intervalNames.length > 0 && (
-        <View style={{ alignItems: 'center' }}>
-          <Icon name={destination.station_name === intervalNames[intervalNames.length - 1] && destination.line !== stations.find(station => station.id === intervals[intervals.length - 1])?.line ? "directions-walk" : "arrow-downward"} size={24} color="black" />
-        </View>
-      )}
-      <View style={{ alignItems: 'center' }}>
-        <Text style={[styles.boldText, { textAlign: 'center' }]}>{destination.station_name}</Text>
-        <Text style={[{ textAlign: 'center', color: lineColors[destination.line] || 'black' }]}>
-          {destination.line}
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-  
-  
-
-  return (
-<BottomSheet ref={bottomSheetRef} index={0} snapPoints={['25%', '50%', '85%']}>
+    <BottomSheet ref={bottomSheetRef} index={0} snapPoints={['25%', '50%', '85%']}>
       <BottomSheetView style={styles.contentContainer}>
         <View style={styles.searchContainer}>
           <View style={styles.inputContainer}>
@@ -242,7 +273,6 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
               <View style={styles.suggestionContainer}>
                 {filteredStations.map(station => {
                   const similarStations = filteredStations.filter(s => s.station_name === station.station_name);
-
                   return (
                     <TouchableOpacity key={station.id} onPress={() => handleStationSelect(station, 'origin')}>
                       <Text style={styles.suggestionText}>
@@ -269,7 +299,6 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
               <View style={styles.suggestionContainer}>
                 {filteredStations.map(station => {
                   const similarStations = filteredStations.filter(s => s.station_name === station.station_name);
-
                   return (
                     <TouchableOpacity key={station.id} onPress={() => handleStationSelect(station, 'destination')}>
                       <Text style={styles.suggestionText}>
@@ -290,16 +319,16 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <CheckBox
-            value={avoidBusyStations}
-            onValueChange={setAvoidBusyStations}
-          />
+          <CheckBox value={avoidBusyStations} onValueChange={setAvoidBusyStations} />
           <Text>Avoid Busy Stations</Text>
         </View>
-    <ScrollView>
+        <ScrollView>
           <Text style={styles.bottomSheetTitle}>Interval Stations</Text>
           {renderIntervals()}
-    </ScrollView>
+          <TouchableOpacity style={styles.startJourneyButton} onPress={startJourney}>
+            <Text style={styles.startJourneyButtonText}>Start Journey</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </BottomSheetView>
     </BottomSheet>
   );
@@ -408,6 +437,18 @@ const styles = StyleSheet.create({
   intervalName: {
     fontSize: 16,
     color: 'white',
+  },
+  startJourneyButton: {
+    backgroundColor: 'green',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  startJourneyButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

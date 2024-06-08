@@ -1,28 +1,27 @@
-// HomeScreen.js
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import Geolocation from 'react-native-geolocation-service';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { fetchLocations, fetchOutputStations } from '../../services/locationSlice';
 import SearchScreen from './searchScreen';
+import Legend from './Legend';
 
 const HomeScreen = () => {
   const [location, setLocation] = useState(null);
   const [selectedLine, setSelectedLine] = useState(null);
   const [filteredStations, setFilteredStations] = useState([]);
   const [region, setRegion] = useState(null);
-  const dispatch = useDispatch();
-  const { stations } = useSelector((state) => state.location);
-  const { outputStations = [] } = useSelector((state) => state.location); // Provide default value
-  const route = useRoute();
-  const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
-  const breathingAnimation = useRef(new Animated.Value(1)).current;
   const [intervals, setIntervalsData] = useState([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+  const breathingAnimation = useRef(new Animated.Value(1)).current;
+  const dispatch = useDispatch();
+  const { stations, outputStations = [] } = useSelector((state) => state.location);
+  const route = useRoute();
 
+  const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
 
   useEffect(() => {
     dispatch(fetchLocations());
@@ -39,17 +38,15 @@ const HomeScreen = () => {
           longitudeDelta: 0.0421,
         });
       },
-      (error) => {
-        console.error(error);
-      },
+      (error) => console.error(error),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
 
     const interval = setInterval(() => {
       dispatch(fetchLocations());
-    }, 600000); // 10 minutes in milliseconds
+    }, 600000);
 
-    return () => clearInterval(interval); // Cleanup on unmount
+    return () => clearInterval(interval);
   }, [dispatch]);
 
   useEffect(() => {
@@ -64,7 +61,7 @@ const HomeScreen = () => {
 
   const handleSearch = useCallback((selectedStations) => {
     setFilteredStations(selectedStations);
-    setSelectedLine(null); // Clear line filter when search is applied
+    setSelectedLine(null);
 
     if (selectedStations.length === 2) {
       const minLat = Math.min(selectedStations[0].latitude, selectedStations[1].latitude);
@@ -84,7 +81,7 @@ const HomeScreen = () => {
   const resetInputs = useCallback(() => {
     setFilteredStations([]);
     setSelectedLine(null);
-    setIntervalsData([]); // clear intervals
+    setIntervalsData([]);
   }, []);
 
   const displayedStations = useMemo(() => {
@@ -97,21 +94,9 @@ const HomeScreen = () => {
     return stations;
   }, [stations, selectedLine, filteredStations]);
 
-  // const handleMarkerPress = (markerId) => {
-  //   setSelectedMarkerId(markerId);
-  //   console.log('Current marker ID:', markerId); // Log the current marker ID being pressed
-  //   console.log(true);
-
-  //   return(
-  //     <TouchableOpacity
-  //       style={styles.pressedStationMarker}
-  //       onPress={() => handleMarkerPress(null)}
-  //     >
-  //       <View style={[styles.stationMarker, { backgroundColor: lineColors[stations.line] }]} />
-  //     </TouchableOpacity>
-  //   )
-  // };
-  
+  const handleMarkerPress = (markerId) => {
+    setSelectedMarkerId(markerId);
+  };
 
   const lineColors = {
     'Putrajaya': '#ffdc49',
@@ -121,7 +106,13 @@ const HomeScreen = () => {
     'Sri Petaling ': '#7a2631',
     'Ampang': '#e67425',
   };
-  
+
+  const crowdLevels = {
+    'Busier than usual': { score: 10, color: '#701a5a', thickness: 10 },
+    'As busy as it gets': { score: 5, color: '#a32683', thickness: 7.5 },
+    'Not too busy': { score: 3, color: '#cf30a6', thickness: 5 },
+    'A little busy': { score: 2, color: '#ff3dce', thickness: 5 },
+  };
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -166,20 +157,38 @@ const HomeScreen = () => {
             </Animated.View>
           </Marker>
         )}
-        {displayedStations.map((station) => (
-  <Marker
-    key={station.id}
-    tracksViewChanges={false}
-    coordinate={{ latitude: station.latitude, longitude: station.longitude }}
-    // onPress={() => handleMarkerPress(station.id)}
-  >
-    <View style={[
-      styles.stationMarker,
-      { backgroundColor: lineColors[station.line] }
-    ]}>
-    </View>
-  </Marker>
-))}
+        {displayedStations.map((station) => {
+          const crowdInfo = crowdLevels[station.crowd_status] || {};
+          const crowdColor = crowdInfo.color || '#ffffff';
+          const crowdThickness = crowdInfo.thickness || 3;
+
+          return (
+            <Marker
+              key={station.id}
+              tracksViewChanges={false}
+              coordinate={{ latitude: station.latitude, longitude: station.longitude }}
+              onPress={() => handleMarkerPress(station.id)}
+            >
+              <View style={styles.stationMarkerContainer}>
+                <View style={[styles.stationMarker, { borderColor: crowdColor, borderWidth: crowdThickness }]}>
+                  <View style={[styles.stationMarkerInner, { backgroundColor: lineColors[station.line] }]} />
+                </View>
+              </View>
+              <Callout>
+                <View style={styles.calloutContainer}>
+                  <Text style={styles.calloutText}>
+                    Station: <Text style={[styles.stationNameText, { color: lineColors[station.line] }]}>
+                      {station.station_name ? station.station_name : 'No Name'}
+                    </Text>
+                  </Text>
+                  <Text style={[styles.calloutText, styles.crowdStatus]}>
+                    Crowd: <Text style={styles.crowdStatusText}>{station.crowd_status || 'Unknown'}</Text>
+                  </Text>
+                </View>
+              </Callout>
+            </Marker>
+          );
+        })}
         {intervals && intervals.map((intervalId, index) => {
           const intervalStation = stations.find(station => station.id === intervalId);
           return intervalStation ? (
@@ -196,10 +205,11 @@ const HomeScreen = () => {
           ) : null;
         })}
       </MapView>
-      <SearchScreen 
-        onSearch={handleSearch} 
-        onReset={resetInputs} // Ensure onReset is passed correctly
-        filter={{ setFilteredStations, filteredStations }} 
+      <Legend />
+      <SearchScreen
+        onSearch={handleSearch}
+        onReset={resetInputs}
+        filter={{ setFilteredStations, filteredStations }}
       />
     </GestureHandlerRootView>
   );
@@ -250,21 +260,50 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: 'rgba(0, 128, 255, 1)',
   },
-  stationMarker: {
-    width: 15,
-    height: 15,
-    borderRadius: 9,
+  stationMarkerContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  pressedStationMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  stationMarker: {
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stationMarkerInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   intervalMarker: {
     width: 15,
     height: 15,
     borderRadius: 7.5,
     backgroundColor: 'grey',
+  },
+  calloutContainer: {
+    width: 280,
+    padding: 10,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  calloutText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flexWrap: 'wrap',
+    marginBottom: 5,
+  },
+  stationNameText: {},
+  crowdStatus: {
+    fontSize: 14,
+    marginTop: 5,
+    flexWrap: 'wrap',
+  },
+  crowdStatusText: {
+    color: 'red',
+    fontWeight: 'bold',
   },
 });
 
