@@ -1,30 +1,41 @@
+// searchScreen.js
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard } from 'react-native';
 import CheckBox from '@react-native-community/checkbox';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { fetchLocations, fetchOutputStations, fetchCrowdData } from '../../services/locationSlice';
-import { ScrollView } from 'react-native-gesture-handler';
-import _ from 'lodash';
 import Geolocation from 'react-native-geolocation-service';
+import { FlatList, ScrollView } from 'react-native-gesture-handler';
+import FloatingWindow from './FloatingWindow'; // Import FloatingWindow component
+import { startJourneyTracking } from './journeyTracker';  // Import the new journeyTracker module
+
 
 const SearchScreen = ({ onSearch, onReset, filter }) => {
+  // State Management
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [originStation, setOriginStation] = useState(null);
   const [destinationStation, setDestinationStation] = useState(null);
   const [filteredStations, setFilteredStations] = useState([]);
   const [searchType, setSearchType] = useState(null);
-  const { stations, outputStations = [] } = useSelector((state) => state.location);
-  const bottomSheetRef = useRef(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
-  const [stationIdToNameMap, setStationIdToNameMap] = useState({});
   const [avoidBusyStations, setAvoidBusyStations] = useState(false);
   const [intervalsData, setIntervalsData] = useState([]);
+  const [showStationInfo, setShowStationInfo] = useState(true);
+  const [showFloatingWindow, setShowFloatingWindow] = useState(false);
+  const [currentStation, setCurrentStation] = useState('');
+  const [nextStation, setNextStation] = useState('');
+
+  // Refs and Navigation
+  const bottomSheetRef = useRef(null);
   const navigation = useNavigation();
-  
+
+  // Selectors
+  const { stations = [] } = useSelector((state) => state.location);
+
+  // Constants
   const lineColors = {
     'Putrajaya': '#ffdc49',
     'Kajang': '#007940',
@@ -34,9 +45,19 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     'Ampang': '#e67425',
   };
 
+  // Callbacks
   const handleStationPress = useCallback((station) => {
     navigation.navigate('StationScreen', { station });
   }, [navigation]);
+
+  const startJourney = () => {
+    if (selectedRoute && selectedRoute.intervals.length > 0) {
+      setShowFloatingWindow(true);
+      startJourneyTracking(selectedRoute.intervals, stations, setCurrentStation, setNextStation, () => {
+        setShowFloatingWindow(false);
+      });
+    }
+  };
 
   const uniqueStations = useMemo(() => {
     const stationMap = {};
@@ -48,6 +69,7 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     return Object.values(stationMap);
   }, [stations]);
 
+  // Effects
   useEffect(() => {
     if (searchType === 'origin' && origin) {
       setFilteredStations(stations.filter(station => station.station_name.toLowerCase().includes(origin.toLowerCase())));
@@ -64,6 +86,7 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     }
   }, [originStation, destinationStation]);
 
+  // Handlers
   const handleInputChange = (input, type) => {
     if (type === 'origin') {
       setOrigin(input);
@@ -74,9 +97,69 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     }
   };
 
-  const startJourney = () => {
-    if (selectedRoute && selectedRoute.intervals.length > 0) {
-      trackUserLocation();
+  const handleStationSelect = (station, type) => {
+    if (type === 'origin') {
+      setOrigin(station.station_name);
+      setOriginStation(station);
+    } else if (type === 'destination') {
+      setDestination(station.station_name);
+      setDestinationStation(station);
+    }
+    setSearchType(null);
+    setFilteredStations([]);
+  };
+
+  const swapInputs = () => {
+    setOrigin(destination);
+    setDestination(origin);
+    setOriginStation(destinationStation);
+    setDestinationStation(originStation);
+  };
+
+  const resetInputs = () => {
+    setOrigin('');
+    setDestination('');
+    setOriginStation(null);
+    setDestinationStation(null);
+    setSearchType(null);
+    filter.setFilteredStations([]);
+    setSelectedRoute(null);
+    onReset();
+  };
+
+  const handleSearch = async () => {
+    Keyboard.dismiss();
+  
+    if (originStation && destinationStation) {
+      try {
+        const response = await fetch('http://10.207.200.150:3000/calculate-path', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            origin: originStation.id,
+            destination: destinationStation.id,
+            avoidBusy: avoidBusyStations,
+          }),
+        });
+  
+        if (!response.ok) throw new Error('Failed to calculate path');
+  
+        const intervalsId = await response.json();
+        intervalsId.interval.pop();
+        const intervals = intervalsId.interval.map(station_id => {
+          return stations.find(station => station.id === station_id)?.station_name || '';
+        });
+  
+        navigation.navigate('Langkah', { intervals: intervalsId.interval });
+        setIntervalsData(intervalsId.interval);
+        setSelectedRoute({ origin: originStation, destination: destinationStation, intervals: intervalsId.interval });
+        onSearch([originStation, destinationStation]);
+        setShowStationInfo(false);  // Hide the FlatList and show renderIntervals
+      } catch (error) {
+        console.error('Error calculating path:', error);
+      }
     }
   };
 
@@ -95,19 +178,20 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
         interval: 10000,
       }
     );
+    return (console.log("You are near your destination"));
   };
 
   const checkProximityToDestination = (latitude, longitude) => {
-    const destination = selectedRoute.intervals[selectedRoute.intervals.length - 1];
-    const secondLastStation = selectedRoute.intervals[selectedRoute.intervals.length - 2];
-    const secondLastStationData = stations.find(station => station.id === secondLastStation);
+    // const destination = selectedRoute.intervals[selectedRoute.intervals.length - 1];
+    // const secondLastStation = selectedRoute.intervals[selectedRoute.intervals.length - 2];
+    // const secondLastStationData = stations.find(station => station.id === secondLastStation);
 
-    // Assuming you have a function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2)
-    const distanceToSecondLastStation = getDistanceFromLatLonInKm(latitude, longitude, secondLastStationData.latitude, secondLastStationData.longitude);
-    
-    if (distanceToSecondLastStation < 0.5) {
-      showNotification();
-    }
+    // const distanceToSecondLastStation = getDistanceFromLatLonInKm(latitude, longitude, secondLastStationData.latitude, secondLastStationData.longitude);
+
+    // if (distanceToSecondLastStation < 0.5) {
+    //   showNotification();
+    // }
+    return (console.log("You are near your destination"));
   };
 
   const showNotification = () => {
@@ -123,81 +207,16 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
     ReactNativeAN.scheduleAlarm(alarmNotifData);
   };
 
-  const resetInputs = () => {
-    setOrigin('');
-    setDestination('');
-    setOriginStation(null);
-    setDestinationStation(null);
-    setSearchType(null);
-    filter.setFilteredStations([]);
-    setSelectedRoute(null);
-    onReset(); // Call the onReset prop
+  // Render Functions
+  const renderStationInfo = ({ item }) => {
+    return (
+      <View style={styles.stationItem}>
+        <Text style={styles.stationName}>{item.station_name}</Text>
+        <Text style={styles.stationDetails}>Crowd Status: {item.crowd_status}</Text>
+      </View>
+    );
   };
 
-  const handleStationSelect = (station, type) => {
-    if (type === 'origin') {
-      setOrigin(station.station_name);
-      setOriginStation(station);
-      setSearchType(null);
-    } else if (type === 'destination') {
-      setDestination(station.station_name);
-      setDestinationStation(station);
-      setSearchType(null);
-    }
-    setFilteredStations([]);
-  };
-
-  const handleSearch = async () => {
-    if (originStation && destinationStation) {
-      try {
-        const response = await fetch('http://10.207.154.227:3000/calculate-path', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            origin: originStation.id,
-            destination: destinationStation.id,
-            avoidBusy: avoidBusyStations, // Include the checkbox state here
-          }),
-        });
-        if (!response.ok) {
-          throw new Error('Failed to calculate path');
-        }
-        console.log(avoidBusyStations);
-        const intervalsId = await response.json();
-        console.log(intervalsId.message); // Log success message
-        console.log(intervalsId.interval);
-        
-        // intervalsId.interval.shift();
-        intervalsId.interval.pop();
-        const intervals = intervalsId.interval.map(station_id => {
-          const stationName = stations.find(station => station.id === station_id)?.station_name || '';
-          return stationName;
-        });
-        navigation.navigate('Langkah', { intervals: intervalsId.interval });
-        setIntervalsData(intervalsId.interval);
-        setSelectedRoute({ origin: originStation, destination: destinationStation, intervals: intervalsId.interval });
-        onSearch([originStation, destinationStation]);
-      } catch (error) {
-        console.error('Error calculating path:', error);
-      }
-    }
-  };
-
-  const swapInputs = () => {
-    setOrigin(destination);
-    setDestination(origin);
-    setOriginStation(destinationStation);
-    setDestinationStation(originStation);
-  };
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.stationItem} onPress={() => handleStationPress(item)}>
-      <Text style={styles.stationName}>{item.station_name} ({item.line})</Text>
-      <Text style={styles.stationDetails}>Line: {item.line}</Text>
-    </TouchableOpacity>
-  );
 
   const renderIntervals = () => {
     if (!selectedRoute) return null;
@@ -209,6 +228,8 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
 
     return (
       <View style={styles.intervalContainer}>
+        <Text style={styles.bottomSheetTitle}>Interval Stations</Text>
+      {avoidBusyStations ? (<Text style={{color: 'red'}}>Avoiding Busy Station</Text>) : null}
         <View style={{ alignItems: 'center' }}>
           <Text style={[styles.boldText, { textAlign: 'center' }]}>{origin.station_name}</Text>
           <Text style={[{ textAlign: 'center', color: lineColors[origin.line] || 'black' }]}>
@@ -253,11 +274,15 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
           <Text style={[{ textAlign: 'center', color: lineColors[destination.line] || 'black' }]}>
             {destination.line}
           </Text>
+          <TouchableOpacity style={styles.startJourneyButton} onPress={startJourney}>
+            <Text style={styles.startJourneyButtonText}>Start Journey</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
   };
 
+  // JSX
   return (
     <BottomSheet ref={bottomSheetRef} index={0} snapPoints={['25%', '50%', '85%']}>
       <BottomSheetView style={styles.contentContainer}>
@@ -311,29 +336,46 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
               </View>
             )}
           </View>
+        </View>
+        <View style={styles.buttonContainer}>
           <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
             <Icon name="search" size={24} color="white" />
+            <Text style={styles.searchButtonText}>Search</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={resetInputs} style={styles.searchButton}>
+          <TouchableOpacity onPress={resetInputs} style={styles.resetButton}>
             <Icon name="clear" size={24} color="white" />
+            <Text style={styles.resetButtonText}>Reset</Text>
           </TouchableOpacity>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
           <CheckBox value={avoidBusyStations} onValueChange={setAvoidBusyStations} />
           <Text>Avoid Busy Stations</Text>
         </View>
-        <ScrollView>
-          <Text style={styles.bottomSheetTitle}>Interval Stations</Text>
-          {renderIntervals()}
-          <TouchableOpacity style={styles.startJourneyButton} onPress={startJourney}>
-            <Text style={styles.startJourneyButtonText}>Start Journey</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        {showStationInfo ? (
+          <FlatList
+            data={stations}
+            renderItem={renderStationInfo}
+            keyExtractor={item => item.id.toString()}
+            style={styles.stationList}
+          />
+        ) : (
+          <ScrollView>
+            {renderIntervals()}
+          </ScrollView>
+        )}
+        {showFloatingWindow && (
+          <FloatingWindow
+            currentStation={currentStation}
+            nextStation={nextStation}
+            onClose={() => setShowFloatingWindow(false)}
+          />
+        )}
       </BottomSheetView>
     </BottomSheet>
-  );
+  );  
 };
 
+// Styles
 const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
@@ -346,6 +388,11 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flex: 1,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
   },
   input: {
     height: 40,
@@ -374,11 +421,39 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   searchButton: {
-    backgroundColor: 'blue',
-    padding: 10,
-    borderRadius: 4,
-    justifyContent: 'center',
+    backgroundColor: '#1E90FF', // DodgerBlue color
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: 150,
+  },
+  searchButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  resetButton: {
+    backgroundColor: '#FF4500', // OrangeRed color
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 150,
+  },
+  resetButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  stationList: {
+    flex: 1 , // Adjust height as needed
   },
   stationItem: {
     padding: 16,
@@ -395,12 +470,9 @@ const styles = StyleSheet.create({
   intervalContainer: {
     marginTop: 10,
   },
-  intervalStation: {
-    padding: 10,
-    borderBottomWidth: 0,
-    borderBottomColor: '#ccc',
-    width: '100%',
-    textAlign: 'center',
+  intervalName: {
+    fontSize: 16,
+    color: 'white',
   },
   boldText: {
     fontWeight: 'bold',
@@ -410,33 +482,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: 10,
   },
-  resetInputs: {
-    backgroundColor: 'red',
-    padding: 10,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   lineName: {
-    marginLeft: 5,
     fontStyle: 'italic',
     color: 'white',
   },
   stationContainer: {
-    backgroundColor: 'transparent', 
-    borderRadius: 25, 
+    backgroundColor: 'transparent',
+    borderRadius: 25,
     padding: 5,
     alignItems: 'center'
-  },
-  stationInfo: {
-    backgroundColor: 'white', 
-    borderRadius: 25, 
-    padding: 5,
-    alignItems: 'center'
-  },
-  intervalName: {
-    fontSize: 16,
-    color: 'white',
   },
   startJourneyButton: {
     backgroundColor: 'green',

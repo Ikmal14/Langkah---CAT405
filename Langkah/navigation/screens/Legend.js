@@ -5,6 +5,7 @@ import LinearGradient from 'react-native-linear-gradient';
 const Legend = () => {
   return (
     <View style={styles.legendContainer}>
+      <Text style={{textAlign: 'center', fontWeight: 'bold', backgroundColor: 'white' }}>Legend</Text>
       <Text style={styles.label}>Busy</Text>
       <LinearGradient
         colors={['#701a5a', '#a32683', '#cf30a6', '#ffffff']}
@@ -18,7 +19,7 @@ const Legend = () => {
 const styles = StyleSheet.create({
   legendContainer: {
     position: 'absolute',
-    top: 50,
+    top: 120,
     right: 10,
     backgroundColor: 'transparent',
     padding: 10,

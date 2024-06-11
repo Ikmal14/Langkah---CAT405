@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import MapView, { Marker, Callout, Polyline } from 'react-native-maps';
 import { useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import Geolocation from 'react-native-geolocation-service';
@@ -16,12 +16,32 @@ const HomeScreen = () => {
   const [region, setRegion] = useState(null);
   const [intervals, setIntervalsData] = useState([]);
   const [selectedMarkerId, setSelectedMarkerId] = useState(null);
+
   const breathingAnimation = useRef(new Animated.Value(1)).current;
+
   const dispatch = useDispatch();
   const { stations, outputStations = [] } = useSelector((state) => state.location);
   const route = useRoute();
 
   const lines = ['Kelana Jaya', 'Sri Petaling ', 'Ampang', 'Kajang', 'Putrajaya', 'Monorail'];
+  const lineColors = {
+    'Putrajaya': '#ffdc49',
+    'Kajang': '#007940',
+    'Monorail': '#78b13e',
+    'Kelana Jaya': '#db1e36',
+    'Sri Petaling ': '#7a2631',
+    'Ampang': '#e67425',
+  };
+  const crowdLevels = {
+    'Busier than usual': { score: 10, color: '#701a5a', thickness: 10 },
+    'As busy as it gets': { score: 5, color: '#a32683', thickness: 7.5 },
+    'Not too busy': { score: 3, color: '#cf30a6', thickness: 5 },
+    'A little busy': { score: 2, color: '#ff3dce', thickness: 5 },
+  };
+  const polylineCoordinates = (displayedStations || []).map((station) => ({
+    latitude: station.latitude,
+    longitude: station.longitude,
+  }));
 
   useEffect(() => {
     dispatch(fetchLocations());
@@ -98,51 +118,97 @@ const HomeScreen = () => {
     setSelectedMarkerId(markerId);
   };
 
-  const lineColors = {
-    'Putrajaya': '#ffdc49',
-    'Kajang': '#007940',
-    'Monorail': '#78b13e',
-    'Kelana Jaya': '#db1e36',
-    'Sri Petaling ': '#7a2631',
-    'Ampang': '#e67425',
-  };
+  const renderMarkers = () => (
+    <>
+      {location && (
+        <Marker coordinate={location}>
+          <Animated.View style={[styles.liveLocationMarker, { transform: [{ scale: breathingAnimation }] }]}>
+            <View style={styles.innerCircle} />
+          </Animated.View>
+        </Marker>
+      )}
+      {displayedStations.map((station) => {
+        const crowdInfo = crowdLevels[station.crowd_status] || {};
+        const crowdColor = crowdInfo.color || '#ffffff';
+        const crowdThickness = crowdInfo.thickness || 3;
 
-  const crowdLevels = {
-    'Busier than usual': { score: 10, color: '#701a5a', thickness: 10 },
-    'As busy as it gets': { score: 5, color: '#a32683', thickness: 7.5 },
-    'Not too busy': { score: 3, color: '#cf30a6', thickness: 5 },
-    'A little busy': { score: 2, color: '#ff3dce', thickness: 5 },
-  };
+        return (
+          <Marker
+            key={station.id}
+            tracksViewChanges={false}
+            coordinate={{ latitude: station.latitude, longitude: station.longitude }}
+            onPress={() => handleMarkerPress(station.id)}
+          >
+            <View style={styles.stationMarkerContainer}>
+              <View style={[styles.stationMarker, { borderColor: crowdColor, borderWidth: crowdThickness }]}>
+                <View style={[styles.stationMarkerInner, { backgroundColor: lineColors[station.line] }]} />
+              </View>
+            </View>
+            <Callout>
+              <View style={styles.calloutContainer}>
+                <Text style={styles.calloutText}>
+                  Station: <Text style={[styles.stationNameText, { color: lineColors[station.line] }]}>
+                    {station.station_name || 'No Name'}
+                  </Text>
+                </Text>
+                <Text style={[styles.calloutText, styles.crowdStatus]}>
+                  Crowd: <Text style={styles.crowdStatusText}>{station.crowd_status || 'Unknown'}</Text>
+                </Text>
+              </View>
+            </Callout>
+          </Marker>
+        );
+      })}
+      {intervals.map((intervalId, index) => {
+        const intervalStation = stations.find(station => station.id === intervalId);
+        return intervalStation ? (
+          <Marker
+            key={`interval-${index}`}
+            tracksViewChanges={false}
+            coordinate={{
+              latitude: intervalStation.latitude,
+              longitude: intervalStation.longitude,
+            }}
+          >
+            <View style={styles.intervalMarker} />
+          </Marker>
+        ) : null;
+      })}
+    </>
+  );
 
   return (
     <GestureHandlerRootView style={styles.container}>
+      <Text style={styles.headerText}>Langkah</Text>
       <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {lines.map((line) => (
-            <TouchableOpacity
-              key={line}
-              style={[
-                styles.filterButton,
-                line === selectedLine && styles.selectedFilterButton,
-                { borderColor: '#000', borderWidth: 1 }
-              ]}
-              onPress={() => handleLineFilter(line)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  { color: lineColors[line] },
-                  line === selectedLine && styles.selectedFilterText,
-                ]}
-              >
-                {line}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <Text style={styles.filterLabel}>Line:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+  {lines.map((line) => (
+    <TouchableOpacity
+      key={line}
+      style={[
+        styles.filterButton,
+        line === selectedLine && {
+          backgroundColor: lineColors[line],
+          borderColor: lineColors[line],
+        },
+      ]}
+      onPress={() => handleLineFilter(line)}
+    >
+      <Text
+        style={[
+          styles.filterText,
+          line === selectedLine ? { color: 'white' } : { color: lineColors[line] },
+        ]}
+      >
+        {line}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</ScrollView>
       </View>
       <MapView
-        style={styles.map}
+        style={styles.maps}
         region={region || {
           latitude: 3.139,
           longitude: 101.6869,
@@ -150,60 +216,7 @@ const HomeScreen = () => {
           longitudeDelta: 0.0421,
         }}
       >
-        {location && (
-          <Marker coordinate={location}>
-            <Animated.View style={[styles.liveLocationMarker, { transform: [{ scale: breathingAnimation }] }]}>
-              <View style={styles.innerCircle} />
-            </Animated.View>
-          </Marker>
-        )}
-        {displayedStations.map((station) => {
-          const crowdInfo = crowdLevels[station.crowd_status] || {};
-          const crowdColor = crowdInfo.color || '#ffffff';
-          const crowdThickness = crowdInfo.thickness || 3;
-
-          return (
-            <Marker
-              key={station.id}
-              tracksViewChanges={false}
-              coordinate={{ latitude: station.latitude, longitude: station.longitude }}
-              onPress={() => handleMarkerPress(station.id)}
-            >
-              <View style={styles.stationMarkerContainer}>
-                <View style={[styles.stationMarker, { borderColor: crowdColor, borderWidth: crowdThickness }]}>
-                  <View style={[styles.stationMarkerInner, { backgroundColor: lineColors[station.line] }]} />
-                </View>
-              </View>
-              <Callout>
-                <View style={styles.calloutContainer}>
-                  <Text style={styles.calloutText}>
-                    Station: <Text style={[styles.stationNameText, { color: lineColors[station.line] }]}>
-                      {station.station_name ? station.station_name : 'No Name'}
-                    </Text>
-                  </Text>
-                  <Text style={[styles.calloutText, styles.crowdStatus]}>
-                    Crowd: <Text style={styles.crowdStatusText}>{station.crowd_status || 'Unknown'}</Text>
-                  </Text>
-                </View>
-              </Callout>
-            </Marker>
-          );
-        })}
-        {intervals && intervals.map((intervalId, index) => {
-          const intervalStation = stations.find(station => station.id === intervalId);
-          return intervalStation ? (
-            <Marker
-              key={`interval-${index}`}
-              tracksViewChanges={false}
-              coordinate={{
-                latitude: intervalStation.latitude,
-                longitude: intervalStation.longitude,
-              }}
-            >
-              <View style={styles.intervalMarker} />
-            </Marker>
-          ) : null;
-        })}
+        {renderMarkers()}
       </MapView>
       <Legend />
       <SearchScreen
@@ -219,32 +232,55 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  map: {
-    flex: 1,
-    zIndex: -1,
+  headerText: {
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: 'bold',
+    paddingVertical: 15,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderColor: '#e0e0e0',
   },
   filterContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 10,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 10,
+    paddingLeft: 10,
+  },
+  filterScroll: {
+    paddingHorizontal: 10,
   },
   filterButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
     marginHorizontal: 5,
+    marginVertical: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: 'white',
   },
   selectedFilterButton: {
-    backgroundColor: '#000',
+    backgroundColor: (lineColors, selectedLine) => (lineColors[selectedLine] || '#000'),
   },
   filterText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
   selectedFilterText: {
-    color: '#fff',
+    color: 'white',
+  },
+  maps: {
+    flex: 1,
+    zIndex: -1,
   },
   liveLocationMarker: {
     width: 20,
