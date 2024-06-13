@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { LogBox } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -10,6 +11,10 @@ const Stack = createStackNavigator();
 
 const MemoizedHomeScreen = React.memo(HomeScreen);
 const MemoizedStationScreen = React.memo(StationScreen);
+
+LogBox.ignoreLogs([
+  '[Reanimated] Tried to modify key `reduceMotion` of an object which has been already passed to a worklet',
+]);
 
 const App = () => {
   const screenOptions = useMemo(() => ({

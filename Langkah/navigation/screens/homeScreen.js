@@ -10,7 +10,7 @@ import SearchScreen from './searchScreen';
 import Legend from './Legend';
 
 const HomeScreen = () => {
-  const [location, setLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState(null); // User location state
   const [selectedLine, setSelectedLine] = useState(null);
   const [filteredStations, setFilteredStations] = useState([]);
   const [region, setRegion] = useState(null);
@@ -50,7 +50,7 @@ const HomeScreen = () => {
     Geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setLocation({ latitude, longitude });
+        setUserLocation({ latitude, longitude });
         setRegion({
           latitude,
           longitude,
@@ -62,11 +62,23 @@ const HomeScreen = () => {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
 
+    const watchId = Geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ latitude, longitude });
+      },
+      (error) => console.error(error),
+      { enableHighAccuracy: true, distanceFilter: 10, interval: 500 }
+    );
+
     const interval = setInterval(() => {
       dispatch(fetchLocations());
     }, 600000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      Geolocation.clearWatch(watchId); // Clear the watch when the component unmounts
+    };
   }, [dispatch]);
 
   useEffect(() => {
@@ -120,8 +132,8 @@ const HomeScreen = () => {
 
   const renderMarkers = () => (
     <>
-      {location && (
-        <Marker coordinate={location}>
+      {userLocation && (
+        <Marker coordinate={userLocation}>
           <Animated.View style={[styles.liveLocationMarker, { transform: [{ scale: breathingAnimation }] }]}>
             <View style={styles.innerCircle} />
           </Animated.View>

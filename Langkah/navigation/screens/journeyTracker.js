@@ -3,7 +3,7 @@ import Geolocation from 'react-native-geolocation-service';
 import PushNotification from 'react-native-push-notification';
 
 const getThirdLastStation = (intervals) => {
-  return intervals[intervals.length - 3];
+  return intervals[intervals.length - 1];
 };
 
 const trackUserLocation = (destinationStation, onProximity, onArrival, onStationUpdate, intervals, stations) => {
@@ -40,7 +40,7 @@ const trackUserLocation = (destinationStation, onProximity, onArrival, onStation
     {
       enableHighAccuracy: true,
       distanceFilter: 10,
-      interval: 10000,
+      interval: 500,
     }
   );
 };
@@ -75,7 +75,9 @@ export const startJourneyTracking = (intervals, stations, onStationUpdate, onCom
   if (!thirdLastStation) {
     console.error("Third last station not found.");
     return;
-  }
+  } else
+    console.log("Third last station found.");
+    console.log(thirdLastStation.station_name);
 
   trackUserLocation(
     thirdLastStation,

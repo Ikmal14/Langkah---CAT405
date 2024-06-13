@@ -11,12 +11,12 @@ const fetchData = async (url) => {
 
 export const fetchLocations = createAsyncThunk(
   'location/fetchLocations',
-  async () => fetchData('http://10.207.200.150:3000/locations')
+  async () => fetchData('http://10.207.154.227:3000/locations')
 );
 
 export const fetchOutputStations = createAsyncThunk(
   'location/fetchOutputStations',
-  async () => fetchData('http://10.207.200.150:3000/output-stations')
+  async () => fetchData('http://10.207.154.227:3000/output-stations')
 );
 
 const locationSlice = createSlice({

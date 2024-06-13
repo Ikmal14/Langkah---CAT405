@@ -132,7 +132,7 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
   
     if (originStation && destinationStation) {
       try {
-        const response = await fetch('http://10.207.200.150:3000/calculate-path', {
+        const response = await fetch('http://10.207.154.227:3000/calculate-path', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -363,13 +363,13 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
             {renderIntervals()}
           </ScrollView>
         )}
-        {showFloatingWindow && (
+        {/* {showFloatingWindow && (
           <FloatingWindow
             currentStation={currentStation}
             nextStation={nextStation}
             onClose={() => setShowFloatingWindow(false)}
           />
-        )}
+        )} */}
       </BottomSheetView>
     </BottomSheet>
   );  
