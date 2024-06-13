@@ -8,6 +8,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { fetchLocations, fetchOutputStations } from '../../services/locationSlice';
 import SearchScreen from './searchScreen';
 import Legend from './Legend';
+import messaging from '@react-native-firebase/messaging';
+
 
 const HomeScreen = () => {
   const [userLocation, setUserLocation] = useState(null); // User location state
@@ -42,6 +44,7 @@ const HomeScreen = () => {
     latitude: station.latitude,
     longitude: station.longitude,
   }));
+
 
   useEffect(() => {
     dispatch(fetchLocations());

@@ -1,18 +1,32 @@
 // journeyTracker.js
 import Geolocation from 'react-native-geolocation-service';
 import PushNotification from 'react-native-push-notification';
+import { useEffect } from 'react';
 
-const getThirdLastStation = (intervals) => {
+PushNotification.createChannel(
+  {
+    channelId: "langkah-channel", // (required)
+    channelName: "Langkah Notifications", // (required)
+    channelDescription: "A channel to categorise your notifications", // (optional) default: undefined.
+    playSound: false, // (optional) default: true
+    soundName: "default", // (optional) See `soundName` parameter of `localNotification` function
+    importance: 4, // (optional) default: 4. Int value of the Android notification importance
+    vibrate: true, // (optional) default: true. Creates the default vibration pattern if true.
+  },
+  (created) => console.log(`createChannel returned '${created}'`) // (optional) callback returns whether the channel was created, false means it already existed.
+);
+
+const getSecondLastStation = (intervals) => {
   return intervals[intervals.length - 1];
 };
 
-const trackUserLocation = (destinationStation, onProximity, onArrival, onStationUpdate, intervals, stations) => {
+const trackUserLocation = (secondLastStation, onProximity, onStationUpdate, intervals, stations, notificationSent) => {
   let currentIntervalIndex = 0;
 
   Geolocation.watchPosition(
     (position) => {
       const { latitude, longitude } = position.coords;
-      const distance = getDistanceFromLatLonInKm(latitude, longitude, destinationStation.latitude, destinationStation.longitude);
+      const distanceToSecondLast = getDistanceFromLatLonInKm(latitude, longitude, secondLastStation.latitude, secondLastStation.longitude);
 
       if (currentIntervalIndex < intervals.length - 1) {
         const currentStation = stations.find(station => station.id === intervals[currentIntervalIndex]);
@@ -21,17 +35,13 @@ const trackUserLocation = (destinationStation, onProximity, onArrival, onStation
         onStationUpdate(currentStation?.station_name, nextStation?.station_name);
 
         const nextStationDistance = getDistanceFromLatLonInKm(latitude, longitude, nextStation.latitude, nextStation.longitude);
-        if (nextStationDistance < 0.1) {
+        if (nextStationDistance < 0.4) {
           currentIntervalIndex++;
         }
       }
 
-      if (distance < 0.5) {
+      if (!notificationSent && distanceToSecondLast < 0.2) {
         onProximity();
-      }
-
-      if (distance < 0.1) {
-        onArrival();
       }
     },
     (error) => {
@@ -48,7 +58,7 @@ const trackUserLocation = (destinationStation, onProximity, onArrival, onStation
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Radius of the Earth in km
   const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+  const dLon = deg2rad(lon1 - lon2);
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
@@ -60,7 +70,8 @@ const deg2rad = (deg) => {
   return deg * (Math.PI / 180);
 };
 
-const showNotification = (title, message) => {
+export const showNotification = (title, message) => {
+  console.log(`Notification Triggered: ${title} - ${message}`); // Log when notification is triggered
   PushNotification.localNotification({
     channelId: "langkah-channel",
     title: title,
@@ -69,25 +80,31 @@ const showNotification = (title, message) => {
 };
 
 export const startJourneyTracking = (intervals, stations, onStationUpdate, onComplete) => {
-  const thirdLastStationId = getThirdLastStation(intervals);
-  const thirdLastStation = stations.find(station => station.id === thirdLastStationId);
+  const secondLastStationId = getSecondLastStation(intervals);
+  const secondLastStation = stations.find(station => station.id === secondLastStationId);
 
-  if (!thirdLastStation) {
-    console.error("Third last station not found.");
+  if (!secondLastStation) {
+    console.error("Second last station not found.");
     return;
-  } else
-    console.log("Third last station found.");
-    console.log(thirdLastStation.station_name);
+  } else {
+    console.log("Second last station found.");
+    console.log(secondLastStation.station_name);
+  }
+
+  let notificationSent = false;
 
   trackUserLocation(
-    thirdLastStation,
-    () => showNotification("Langkah App", "You are approaching your destination"),
+    secondLastStation,
     () => {
-      showNotification("Langkah App", "You have arrived at your destination");
-      onComplete();
+      if (!notificationSent) {
+        showNotification("Langkah App", "You are approaching one station before your destination");
+        notificationSent = true;
+        onComplete();
+      }
     },
     onStationUpdate,
     intervals,
-    stations
+    stations,
+    notificationSent
   );
 };

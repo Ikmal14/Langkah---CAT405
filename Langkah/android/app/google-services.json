@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "192929338704",
+    "project_id": "langkah-405908",
+    "storage_bucket": "langkah-405908.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:192929338704:android:f61f5c69ab07d24060c855",
+        "android_client_info": {
+          "package_name": "com.langkah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHXz9qb2xG9wpQ_WJR73MZeu8z55efIH0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
