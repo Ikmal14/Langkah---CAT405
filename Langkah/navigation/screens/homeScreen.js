@@ -10,7 +10,6 @@ import SearchScreen from './searchScreen';
 import Legend from './Legend';
 import messaging from '@react-native-firebase/messaging';
 
-
 const HomeScreen = () => {
   const [userLocation, setUserLocation] = useState(null); // User location state
   const [selectedLine, setSelectedLine] = useState(null);
@@ -40,11 +39,11 @@ const HomeScreen = () => {
     'Not too busy': { score: 3, color: '#cf30a6', thickness: 5 },
     'A little busy': { score: 2, color: '#ff3dce', thickness: 5 },
   };
+
   const polylineCoordinates = (displayedStations || []).map((station) => ({
     latitude: station.latitude,
     longitude: station.longitude,
   }));
-
 
   useEffect(() => {
     dispatch(fetchLocations());
@@ -81,6 +80,16 @@ const HomeScreen = () => {
     return () => {
       clearInterval(interval);
       Geolocation.clearWatch(watchId); // Clear the watch when the component unmounts
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    const crowdStatusInterval = setInterval(() => {
+      dispatch(fetchLocations());
+    }, 600000); // 600,000 milliseconds = 10 minutes
+
+    return () => {
+      clearInterval(crowdStatusInterval);
     };
   }, [dispatch]);
 
@@ -198,29 +207,29 @@ const HomeScreen = () => {
       <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Line:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-  {lines.map((line) => (
-    <TouchableOpacity
-      key={line}
-      style={[
-        styles.filterButton,
-        line === selectedLine && {
-          backgroundColor: lineColors[line],
-          borderColor: lineColors[line],
-        },
-      ]}
-      onPress={() => handleLineFilter(line)}
-    >
-      <Text
-        style={[
-          styles.filterText,
-          line === selectedLine ? { color: 'white' } : { color: lineColors[line] },
-        ]}
-      >
-        {line}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
+          {lines.map((line) => (
+            <TouchableOpacity
+              key={line}
+              style={[
+                styles.filterButton,
+                line === selectedLine && {
+                  backgroundColor: lineColors[line],
+                  borderColor: lineColors[line],
+                },
+              ]}
+              onPress={() => handleLineFilter(line)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  line === selectedLine ? { color: 'white' } : { color: lineColors[line] },
+                ]}
+              >
+                {line}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
       <MapView
         style={styles.maps}

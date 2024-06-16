@@ -1,4 +1,5 @@
 import psycopg2
+import math
 import heapq
 import networkx as nx  # Import NetworkX library for graph operations
 
@@ -11,10 +12,10 @@ DB_PARAMS = {
     'port': '5432'
 }
 
-def manhattan_distance(node1, node2):
+def euclidean_distance(node1, node2):
     x1, y1 = node1
     x2, y2 = node2
-    return abs(x1 - x2) + abs(y1 - y2)
+    return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
 def fetch_station_coordinates(cursor):
     cursor.execute("SELECT id, latitude, longitude FROM merged_mrt_lrt;")
@@ -68,7 +69,7 @@ def a_star_algorithm(start, goal, G, coords):
     heapq.heappush(open_set, (0, start))
     came_from = {}
     g_score = {start: 0}
-    f_score = {start: manhattan_distance(coords[start], coords[goal])}
+    f_score = {start: euclidean_distance(coords[start], coords[goal])}
     
     while open_set:
         _, current = heapq.heappop(open_set)
@@ -87,7 +88,7 @@ def a_star_algorithm(start, goal, G, coords):
             if tentative_g_score < g_score.get(neighbor, float('inf')):
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g_score
-                f_score[neighbor] = tentative_g_score + manhattan_distance(coords[neighbor], coords[goal])
+                f_score[neighbor] = tentative_g_score + euclidean_distance(coords[neighbor], coords[goal])
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
                 
     return []

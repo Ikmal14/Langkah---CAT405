@@ -132,7 +132,7 @@ const SearchScreen = ({ onSearch, onReset, filter }) => {
   
     if (originStation && destinationStation) {
       try {
-        const response = await fetch('http://10.207.154.227:3000/calculate-path', {
+        const response = await fetch('http://10.207.203.8:3000/calculate-path', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
