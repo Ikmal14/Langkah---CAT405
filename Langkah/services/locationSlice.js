@@ -11,12 +11,12 @@ const fetchData = async (url) => {
 
 export const fetchLocations = createAsyncThunk(
   'location/fetchLocations',
-  async () => fetchData('http://10.207.203.8:3000/locations')
+  async () => fetchData('localhost//locations') //edit your ip adress and port
 );
 
 export const fetchOutputStations = createAsyncThunk(
   'location/fetchOutputStations',
-  async () => fetchData('http://10.207.203.8:3000/output-stations')
+  async () => fetchData('localhost//output-stations') //edit your ip adress and port
 );
 
 const locationSlice = createSlice({

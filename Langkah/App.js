@@ -1,6 +1,5 @@
-// App.js
 import React, { useMemo, useEffect, useState } from 'react';
-import { LogBox, Alert, PermissionsAndroid } from 'react-native';
+import { LogBox, PermissionsAndroid } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -10,6 +9,7 @@ import store from './services/store';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { showNotification } from './navigation/screens/journeyTracker';  // Adjust the path accordingly
+import Geolocation from '@react-native-community/geolocation';
 
 const Stack = createStackNavigator();
 
@@ -28,25 +28,44 @@ const App = () => {
   }), []);
 
   useEffect(() => {
-    const requestUserPermission = async () => {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-      const authStatus = await messaging().requestPermission();
-      const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-  
-      if (enabled) {
-        console.log('Authorization status:', authStatus);
-        const token = await messaging().getToken();
-        //store token in secure storage
-        // await SecureStore.setItemAsync('DEVICE_TOKEN', token);
-        // const tokenStored = await SecureStore.getItemAsync('DEVICE_TOKEN');
-  
-        console.log('FCM token:', token);
+    const requestPermissions = async () => {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'This app needs access to your location.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('You can use the location');
+        } else {
+          console.log('Location permission denied');
+        }
+
+        const notificationPermission = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+
+        const authStatus = await messaging().requestPermission();
+        const enabled =
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+        if (enabled) {
+          console.log('Authorization status:', authStatus);
+          const token = await messaging().getToken();
+          console.log('FCM token:', token);
+        }
+      } catch (err) {
+        console.warn(err);
       }
     };
-  
-    requestUserPermission();
+
+    requestPermissions();
   }, []);
 
   async function onMessageReceived(message) {
@@ -67,7 +86,7 @@ const App = () => {
     });
 
     if (!notificationSent) {
-      showNotification(message.notification.title, message.notification.body);  // Call showNotification here
+      showNotification(message.notification.title, message.notification.body);
       setNotificationSent(true);
     }
   }
